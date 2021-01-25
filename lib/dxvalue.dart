@@ -18,6 +18,87 @@ abstract class BaseValue {
   get type {
     return valueType.VT_Null;
   }
+
+  int asInteger({int defValue}){
+    switch (type){
+      case valueType.VT_Int:
+        return (this as IntValue).value??defValue;
+      case valueType.VT_Double:
+        return (this as DoubleValue).value?.toInt()??defValue;
+      case valueType.VT_Boolean:
+        return ((this as BoolValue).value??false)?1:0;
+      case valueType.VT_DateTime:
+        return DateTimeValue.toDelphiTime((this as DateTimeValue).value??DateTime(0)).toInt();
+      case valueType.VT_Null:
+        return 0;
+      case valueType.VT_String:
+        if ((this as StringValue).value == null){
+          return defValue;
+        }
+        return int.tryParse((this as StringValue).value,radix: defValue);
+    }
+    return defValue;
+  }
+
+  double asDouble({double defValue}){
+    switch (type){
+      case valueType.VT_Int:
+        return (this as IntValue).value?.toDouble()??defValue;
+      case valueType.VT_Double:
+        return (this as DoubleValue).value??defValue;
+      case valueType.VT_Boolean:
+        return ((this as BoolValue).value??false)?1:0;
+      case valueType.VT_DateTime:
+        return DateTimeValue.toDelphiTime((this as DateTimeValue).value??DateTime(0));
+      case valueType.VT_Null:
+        return 0;
+      case valueType.VT_String:
+        if ((this as StringValue).value == null){
+          return defValue;
+        }
+        return double.tryParse((this as StringValue).value);
+    }
+    return defValue;
+  }
+
+  DateTime asDateTime({DateTime defValue}){
+    switch (type){
+      case valueType.VT_Int:
+        return (this as IntValue).value?.toDouble()??defValue;
+      case valueType.VT_Double:
+        return (this as DoubleValue).value??defValue;
+      case valueType.VT_DateTime:
+        return (this as DateTimeValue).value;
+      case valueType.VT_String:
+        return DateTime.tryParse((this as StringValue).value)??defValue;
+    }
+    return defValue;
+  }
+
+  bool asBoolean({bool defValue}){
+    switch (type){
+      case valueType.VT_Int:
+        return (this as IntValue).value??0 != 0;
+      case valueType.VT_Double:
+        return (this as DoubleValue).value??0 != 0;
+      case valueType.VT_Boolean:
+        return (this as BoolValue).value??false;
+      case valueType.VT_DateTime:
+        return DateTimeValue.toDelphiTime((this as DateTimeValue).value??DateTime(0)) > 0;
+      case valueType.VT_Null:
+        return false;
+      case valueType.VT_String:
+        if ((this as StringValue).value == null){
+          return false;
+        }
+        return (this as StringValue).value == "true";
+    }
+    return defValue;
+  }
+
+  String asString(){
+    return toString();
+  }
 }
 
 class IntValue  extends BaseValue{
@@ -53,7 +134,24 @@ class IntValue  extends BaseValue{
 
   int operator >>(int shiftAmount)=> (value??0) >> shiftAmount;
 
-  num operator +(num other) => (value??0) + other;
+  Object operator +(Object other){
+    if (other is num){
+      return (value??0) + other;
+    }
+    if (other is String){
+      return (value?.toString())??""+other;
+    }
+    if (other is IntValue){
+      return value + other.value;
+    }
+    if (other is DoubleValue){
+      return value + other.value;
+    }
+    if (other is StringValue){
+      return (value?.toString())??""+other.value??"";
+    }
+    throw FormatException("unSuport data type",other);
+  }
 
   num operator *(num other) => (value??0) * other;
 
@@ -98,7 +196,24 @@ class DoubleValue extends BaseValue{
 
   int operator ~/(num other) => (value??0) ~/ other;
 
-  double operator +(num other) => (value??0) + other;
+  Object operator +(Object other){
+    if (other is num){
+      return (value??0) + other;
+    }
+    if (other is String){
+      return (value?.toString())??""+other;
+    }
+    if (other is IntValue){
+      return value + other.value;
+    }
+    if (other is DoubleValue){
+      return value + other.value;
+    }
+    if (other is StringValue){
+      return (value?.toString())??""+other.value??"";
+    }
+    throw FormatException("unSuport data type",other);
+  }
 
   double operator -(num other) => (value??0) - other;
 
