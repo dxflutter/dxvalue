@@ -1,5 +1,11 @@
 library dxvalue;
 
+import 'dart:io';
+import 'dart:typed_data';
+
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
 enum valueType{
   //简单元素的类型
   VT_Int,
@@ -8,6 +14,7 @@ enum valueType{
   VT_Boolean,
   VT_String,
   VT_Null,
+  VT_Binary,
   //复杂数据结构
   VT_Object,
   VT_Array
@@ -345,6 +352,11 @@ class StringValue extends BaseValue{
 
   StringValue({this.value});
 
+  @override
+  get type {
+    return valueType.VT_String;
+  }
+
   String operator +(String other) => (value??"") + other;
   bool operator == (Object other){
     if(other is StringValue){
@@ -359,6 +371,117 @@ class StringValue extends BaseValue{
   @override
   // TODO: implement hashCode
   int get hashCode => super.hashCode;
+}
+
+class BinaryValue extends BaseValue{
+  Uint8List binary;
+  @override
+  get type => valueType.VT_Binary;
+
+  Uint8List asBytes() => binary;
+
+}
+
+class DxValue extends BaseValue{
+  bool _isArray;
+  List<BaseValue> _values;
+  List<String> _keys;
+  @override
+  get type {
+    if(_isArray){
+      return valueType.VT_Array;
+    }
+    return valueType.VT_Object;
+    //BytesBuilder
+  }
+  DxValue(bool arrayValue){
+    _isArray = arrayValue;
+    _values = List<BaseValue>();
+    if (!_isArray){
+      _keys = List<String>();
+    }
+  }
+
+  DxValue newObject({String key}){
+    DxValue v;
+    if(_isArray){
+      v = DxValue(false);
+      _values.add(v);
+      return v;
+    }
+    if(key??"" == ""){
+      return null;
+    }
+    for(var i = 0;i<_values.length;i++){
+      if(key == _keys[i]){
+        if (_values[i] != null && _values[i].type == valueType.VT_Object){
+          return _values[i] as DxValue;
+        }
+        v = DxValue(false);
+        _values[i] = v;
+        return v;
+      }
+    }
+    _keys.add(key);
+    v = DxValue(false);
+    _values.add(v);
+    return v;
+  }
+
+  DxValue newArray({String key}){
+    DxValue v;
+    if(_isArray){
+      v = DxValue(true);
+      _values.add(v);
+      return v;
+    }
+    if(key??"" == ""){
+      return null;
+    }
+    for(var i = 0;i<_values.length;i++){
+      if(key == _keys[i]){
+        if (_values[i] != null && _values[i].type == valueType.VT_Object){
+          return _values[i] as DxValue;
+        }
+        v = DxValue(true);
+        _values[i] = v;
+        return v;
+      }
+    }
+    _keys.add(key);
+    v = DxValue(true);
+    _values.add(v);
+    return v;
+  }
+
+  BaseValue valueByKey(String key,[bool ignoreCase=true]){
+    if(_isArray || key == null){
+      return null;
+    }
+    if(ignoreCase){
+      key = key.toLowerCase();
+      for(var i = 0;i<_keys.length;i++){
+        if(key.compareTo(_keys[i].toLowerCase()) == 0){
+          return _values[i];
+        }
+      }
+    }else{
+      for(var i = 0;i<_keys.length;i++){
+        if(key == _keys[i]){
+          return _values[i];
+        }
+      }
+    }
+    return null;
+  }
+
+  BaseValue valueByIndex(int index){
+    if(index == null || index < 0 || index > _values.length - 1){
+      return null;
+    }
+    return _values[index];
+  }
+
 
 }
 
