@@ -5,380 +5,35 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:dxlibrary/dxlibrary.dart';
+import 'src/simplevalue.dart';
 
-enum valueType{
-  //简单元素的类型
-  VT_Int,
-  VT_Double,
-  VT_DateTime,
-  VT_Boolean,
-  VT_String,
-  VT_Null,
-  VT_Binary,
-  //复杂数据结构
-  VT_Object,
-  VT_Array
-}
+export 'src/simplevalue.dart';
 
-//基类
-abstract class BaseValue {
-  get type {
-    return valueType.VT_Null;
+
+class _DxValueIterator extends Iterator<KeyValue>{
+  int _startIterator;
+  final DxValue value;
+  _DxValueIterator(this.value){
+    _startIterator = 0;
   }
-
-  int asInteger({int defValue}){
-    switch (type){
-      case valueType.VT_Int:
-        return (this as IntValue).value??defValue;
-      case valueType.VT_Double:
-        return (this as DoubleValue).value?.toInt()??defValue;
-      case valueType.VT_Boolean:
-        return ((this as BoolValue).value??false)?1:0;
-      case valueType.VT_DateTime:
-        return DateTimeValue.toDelphiTime((this as DateTimeValue).value??DateTime(0)).toInt();
-      case valueType.VT_Null:
-        return 0;
-      case valueType.VT_String:
-        if ((this as StringValue).value == null){
-          return defValue;
-        }
-        return int.tryParse((this as StringValue).value,radix: defValue);
+  @override
+  KeyValue get current{
+    if(value._isArray){
+      return KeyValue("", value._values[_startIterator]);
     }
-    return defValue;
+    return KeyValue(value._keys[_startIterator], value._values[_startIterator]);
   }
-
-  double asDouble({double defValue}){
-    switch (type){
-      case valueType.VT_Int:
-        return (this as IntValue).value?.toDouble()??defValue;
-      case valueType.VT_Double:
-        return (this as DoubleValue).value??defValue;
-      case valueType.VT_Boolean:
-        return ((this as BoolValue).value??false)?1:0;
-      case valueType.VT_DateTime:
-        return DateTimeValue.toDelphiTime((this as DateTimeValue).value??DateTime(0));
-      case valueType.VT_Null:
-        return 0;
-      case valueType.VT_String:
-        if ((this as StringValue).value == null){
-          return defValue;
-        }
-        return double.tryParse((this as StringValue).value);
-    }
-    return defValue;
-  }
-
-  DateTime asDateTime({DateTime defValue}){
-    switch (type){
-      case valueType.VT_Int:
-        return (this as IntValue).value?.toDouble()??defValue;
-      case valueType.VT_Double:
-        return (this as DoubleValue).value??defValue;
-      case valueType.VT_DateTime:
-        return (this as DateTimeValue).value;
-      case valueType.VT_String:
-        return DateTime.tryParse((this as StringValue).value)??defValue;
-    }
-    return defValue;
-  }
-
-  bool asBoolean({bool defValue}){
-    switch (type){
-      case valueType.VT_Int:
-        return (this as IntValue).value??0 != 0;
-      case valueType.VT_Double:
-        return (this as DoubleValue).value??0 != 0;
-      case valueType.VT_Boolean:
-        return (this as BoolValue).value??false;
-      case valueType.VT_DateTime:
-        return DateTimeValue.toDelphiTime((this as DateTimeValue).value??DateTime(0)) > 0;
-      case valueType.VT_Null:
-        return false;
-      case valueType.VT_String:
-        if ((this as StringValue).value == null){
-          return false;
-        }
-        return (this as StringValue).value == "true";
-    }
-    return defValue;
-  }
-
-  String asString(){
-    return toString();
-  }
-}
-
-class IntValue  extends BaseValue{
-  int value;
-  IntValue({this.value});
 
   @override
-  get type => valueType.VT_Int;
-
-  IntValue.fromString(String vStr){
-    value = int.tryParse(vStr,radix: value);
-  }
-
-  bool operator == (Object other){
-    if(other is IntValue){
-      return value == other.value;
+  bool moveNext() {
+    _startIterator++;
+    if(_startIterator < value._values.length){
+      return true;
     }
-    if(other is num){
-      return value == other;
-    }
+    _startIterator = 0;
     return false;
   }
-
-  int operator &(int other)=>other & (value??0);
-
-  int operator |(int other) => (value??0) | other;
-
-  int operator ^(int other) => (value??0) ^ other;
-
-  int operator ~() => ~(value??0);
-
-  int operator <<(int shiftAmount) => (value??0) << shiftAmount;
-
-  int operator >>(int shiftAmount)=> (value??0) >> shiftAmount;
-
-  Object operator +(Object other){
-    if (other is num){
-      return (value??0) + other;
-    }
-    if (other is String){
-      return (value?.toString())??""+other;
-    }
-    if (other is IntValue){
-      return value + other.value;
-    }
-    if (other is DoubleValue){
-      return value + other.value;
-    }
-    if (other is StringValue){
-      return (value?.toString())??""+other.value??"";
-    }
-    throw FormatException("unSuport data type",other);
-  }
-
-  num operator *(num other) => (value??0) * other;
-
-  num operator /(num other) => (value??0) / other;
-
-  num operator -(num other)=> (value??0) - other;
-
-  double operator %(num other) => (value??0) % other;
-
-  @override
-  String toString() => (value??0).toString();
-
-  @override
-  // TODO: implement hashCode
-  int get hashCode => super.hashCode;
-
-}
-
-class DoubleValue extends BaseValue{
-  double value;
-  DoubleValue({this.value});
-
-  @override
-  get type => valueType.VT_Double;
-
-  DoubleValue.fromString(String vStr){
-    value = double.tryParse(vStr);
-  }
-
-  @override
-  String toString() => value.toString();
-
-  bool operator == (Object other){
-    if (other is double){
-      return other == value;
-    }
-    if (other is int){
-      return other.toDouble() == value;
-    }
-    return false;
-  }
-
-  int operator ~/(num other) => (value??0) ~/ other;
-
-  Object operator +(Object other){
-    if (other is num){
-      return (value??0) + other;
-    }
-    if (other is String){
-      return (value?.toString())??""+other;
-    }
-    if (other is IntValue){
-      return value + other.value;
-    }
-    if (other is DoubleValue){
-      return value + other.value;
-    }
-    if (other is StringValue){
-      return (value?.toString())??""+other.value??"";
-    }
-    throw FormatException("unSuport data type",other);
-  }
-
-  double operator -(num other) => (value??0) - other;
-
-  double operator /(num other) => (value??0)/other;
-
-  double operator %(num other) => (value??0) % other;
-
-  double operator *(num other) => (value??0) * other;
-
-  @override
-  // TODO: implement hashCode
-  int get hashCode => super.hashCode;
-
-}
-
-class DateTimeValue extends BaseValue{
-  DateTime value;
-  /*Delphi日期初始函数
-   Delphi的日期规则为到1899-12-30号的天数+当前的毫秒数/一天的总共毫秒数集合
-   */
-  static DateTime _delphiFirstTime= DateTime(1899,12,30); //Delphi的初始化时间
-  static DateTime _delphiUtcTime = DateTime.utc(1899,12,30);
-  //转换到DelphiTime
-  static double toDelphiTime(DateTime time){
-    if (time.year == 0 && time.day == 0 && time.month == 0){
-      return 0;
-    }
-    Duration duration;
-    DateTime date;
-    if (time.isUtc){
-      duration = time.difference(_delphiUtcTime);
-      date = DateTime.utc(time.year,time.month,time.day);
-    }else{
-      duration = time.difference(_delphiFirstTime);
-      date = DateTime(time.year,time.month,time.day);
-    }
-    int days = duration.inHours ~/ 24;
-    Duration timeSecs = time.difference(date);
-    return days.toDouble() + timeSecs.inMilliseconds / Duration.millisecondsPerDay;
-  }
-
-  static DateTime dateTimeFromDelphi(double delphiTime){
-    if (delphiTime == 0){
-      return DateTime(0);
-    }
-    int days = delphiTime.toInt();
-    double ms = delphiTime - days.toDouble();
-    ms = ms * Duration.millisecondsPerDay;
-    return _delphiFirstTime.add(Duration(days: days,milliseconds: ms.toInt()));
-  }
-
-  DateTimeValue({this.value});
-
-  DateTimeValue.fromDelphi(double delphiTime){
-    value = dateTimeFromDelphi(delphiTime);
-  }
-
-  DateTimeValue.fromString(String vStr){
-    DateTime v = DateTime.tryParse(vStr);
-    if (v != null){
-      value = v;
-    }
-    double d = double.tryParse(vStr);
-    if (d != null){
-      value = dateTimeFromDelphi(d);
-    }
-  }
-
-  @override
-  get type {
-    return valueType.VT_DateTime;
-  }
-
-  @override
-  String toString() => value.toString();
-
-  bool operator == (Object other){
-    if (other is DateTimeValue){
-      return other.value == value;
-    }
-    if (other is double){
-      return dateTimeFromDelphi(other) == value;
-    }
-    return false;
-  }
-
-  DateTime operator +(Duration other){
-    return (value??DateTime(0)).add(other);
-  }
-
-  @override
-  // TODO: implement hashCode
-  int get hashCode => super.hashCode;
-
-}
-
-class BoolValue extends BaseValue{
-  bool value;
-  BoolValue({this.value});
-  BoolValue.fromString(String vStr){
-    value = bool.fromEnvironment(vStr);
-  }
-
-  @override
-  get type {
-    return valueType.VT_Boolean;
-  }
-
-  @override
-  String toString() => (value??false).toString();
-
-  bool operator == (Object other){
-    if(other is BoolValue){
-      return value == other.value;
-    }
-    if(other is bool){
-      return value == other;
-    }
-    return false;
-  }
-
-  @override
-  // TODO: implement hashCode
-  int get hashCode => super.hashCode;
-}
-
-class StringValue extends BaseValue{
-  String value;
-
-  StringValue({this.value});
-
-  @override
-  get type {
-    return valueType.VT_String;
-  }
-
-  String operator +(String other) => (value??"") + other;
-  bool operator == (Object other){
-    if(other is StringValue){
-      return value == other.value;
-    }
-    if(other is String){
-      return value == other;
-    }
-    return false;
-  }
-
-  @override
-  // TODO: implement hashCode
-  int get hashCode => super.hashCode;
-}
-
-class BinaryValue extends BaseValue{
-  Uint8List binary;
-  @override
-  get type => valueType.VT_Binary;
-
-  Uint8List asBytes() => binary;
 
 }
 
@@ -386,13 +41,100 @@ class DxValue extends BaseValue{
   bool _isArray;
   List<BaseValue> _values;
   List<String> _keys;
+  int _newKeyIndex(String key){
+    int idx = -1;
+    for(var i = 0;i<_keys.length;i++){
+      if(key == _keys[i]){
+        idx = i;
+        break;
+      }
+    }
+    if (idx == -1){
+      _keys.add(key);
+      _values.add(null);
+      idx = _values.length - 1;
+    }
+    return idx;
+  }
+
+  String _jsonString(int level){
+    StringBuffer stringBuffer = StringBuffer();
+    if(_isArray){
+      stringBuffer.write('[\r\n');
+      if(_values != null){
+        for(var i = 0;i<_values.length;i++){
+          if(i!=0){
+            stringBuffer.write(',\r\n');
+          }
+          for(var i = 0;i <= level;i++){
+            stringBuffer.write('  ');
+          }
+
+          if(_values[i] != null && _values[i].type == valueType.VT_String || _values[i].type == valueType.VT_DateTime){
+            stringBuffer.write('"');
+            stringBuffer.write(_values[i]);
+            stringBuffer.write('"');
+          }else{
+            if (_values[i] != null && _values[i] is DxValue){
+              stringBuffer.write((_values[i] as DxValue)._jsonString(level + 1));
+            }else{
+              stringBuffer.write(_values[i]);
+            }
+
+          }
+        }
+      }
+      stringBuffer.write('\r\n');
+      for(var i = 0;i < level;i++){
+        stringBuffer.write('  ');
+      }
+      stringBuffer.write(']');
+    }else{
+      stringBuffer.write('{\r\n');
+      if(_values != null){
+        for(var i = 0;i<_values.length;i++){
+          if(i!=0){
+            stringBuffer.write(',\r\n');
+          }
+          for(var i = 0;i <= level;i++){
+            stringBuffer.write('  ');
+          }
+          stringBuffer.write('"');
+          stringBuffer.write(_keys[i]);
+          stringBuffer.write('":');
+
+          if(_values[i] != null && _values[i].type == valueType.VT_String || _values[i].type == valueType.VT_DateTime){
+            stringBuffer.write('"');
+            stringBuffer.write(_values[i]);
+            stringBuffer.write('"');
+          }else{
+            if (_values[i] != null && _values[i] is DxValue){
+              stringBuffer.write((_values[i] as DxValue)._jsonString(level + 1));
+            }else{
+              stringBuffer.write(_values[i]);
+            }
+          }
+        }
+      }
+      stringBuffer.write('\r\n');
+      for(var i = 0;i < level;i++){
+        stringBuffer.write('  ');
+      }
+      stringBuffer.write('}');
+    }
+    return stringBuffer.toString();
+  }
+
+  @override
+  Iterator<KeyValue> get iterator => _DxValueIterator(this);
+
+
   @override
   get type {
     if(_isArray){
       return valueType.VT_Array;
     }
     return valueType.VT_Object;
-    //BytesBuilder
   }
   DxValue(bool arrayValue){
     _isArray = arrayValue;
@@ -409,7 +151,7 @@ class DxValue extends BaseValue{
       _values.add(v);
       return v;
     }
-    if(key??"" == ""){
+    if((key??"") == ""){
       return null;
     }
     for(var i = 0;i<_values.length;i++){
@@ -455,7 +197,7 @@ class DxValue extends BaseValue{
   }
 
   BaseValue valueByKey(String key,[bool ignoreCase=true]){
-    if(_isArray || key == null){
+    if(_isArray || key == null || key.length == 0){
       return null;
     }
     if(ignoreCase){
@@ -482,6 +224,181 @@ class DxValue extends BaseValue{
     return _values[index];
   }
 
+  int intByKey(String key,int defValue,[bool ignoreCase=true]){
+    BaseValue v = valueByKey(key,ignoreCase);
+    return (v == null)?defValue:v.asInteger(defValue: defValue);
+  }
 
+  double doubleByKey(String key,double defValue,[bool ignoreCase=true]){
+    BaseValue v = valueByKey(key,ignoreCase);
+    return (v == null)?defValue:v.asDouble(defValue: defValue);
+  }
+
+  bool boolByKey(String key,bool defValue,[bool ignoreCase=true]){
+    BaseValue v = valueByKey(key,ignoreCase);
+    return (v == null)?defValue:v.asBoolean(defValue: defValue);
+  }
+
+  DateTime dateTimeByKey(String key,DateTime defValue,[bool ignoreCase=true]){
+    BaseValue v = valueByKey(key,ignoreCase);
+    return (v == null)?defValue:v.asDateTime(defValue: defValue);
+  }
+
+  String stringByKey(String key,String defValue,[bool ignoreCase=true]){
+    BaseValue v = valueByKey(key,ignoreCase);
+    return (v == null)?defValue:v.asString();
+  }
+
+  BaseValue operator [](Object index){
+    if(index is int){
+      if(index >= 0 && index < _values.length){
+        return _values[index];
+      }
+    }else if (index is String){
+      return valueByKey(index);
+    }else if (index is IntValue){
+      int idx = index.value??-1;
+      if(idx >= 0 && idx < _values.length){
+        return _values[idx];
+      }
+    }else if (index is StringValue){
+      return valueByKey(index.value??"");
+    }
+    return null;
+  }
+
+  //dart字符串采用UTF-16编码
+  @override
+  String toString(){
+    return _jsonString(0);
+  }
+
+  void clear(){
+    _values.clear();
+    if(_keys != null){
+      _keys.clear();
+    }
+  }
+
+  void setKeyInt(String key,int value){
+    if(_isArray){
+      return ;
+    }
+    int idx = _newKeyIndex(key);
+    if(_values[idx] != null && _values[idx] is IntValue){
+      (_values[idx] as IntValue).value = value;
+      return;
+    }
+    _values[idx] = IntValue(value: value);
+  }
+
+  void setKeyString(String key,String value){
+    if(_isArray){
+      return ;
+    }
+    int idx = _newKeyIndex(key);
+    if(_values[idx] != null && _values[idx] is StringValue){
+      (_values[idx] as StringValue).value = value;
+      return;
+    }
+    _values[idx] = StringValue(value: value);
+  }
+
+  void setKeyDouble(String key,double value){
+    if(_isArray){
+      return ;
+    }
+    int idx = _newKeyIndex(key);
+    if(_values[idx] != null && _values[idx] is DoubleValue){
+      (_values[idx] as DoubleValue).value = value;
+      return;
+    }
+    _values[idx] = DoubleValue(value: value);
+  }
+
+  void setKeyBool(String key,bool value){
+    if(_isArray){
+      return ;
+    }
+    int idx = _newKeyIndex(key);
+    if(_values[idx] != null && _values[idx] is BoolValue){
+      (_values[idx] as BoolValue).value = value;
+      return;
+    }
+    _values[idx] = BoolValue(value: value);
+  }
+
+  void setKeyDxValue(String key,BaseValue value){
+    int idx = _newKeyIndex(key);
+    bool oldIsNull = (_values[idx]?.type)??(valueType.VT_Null) == valueType.VT_Null;
+    valueType vt = value.type;
+    if (vt == valueType.VT_Null){
+      _values[idx] = null;
+      return;
+    }
+    if (oldIsNull || _values[idx].type != vt){
+      _values[idx] = value;
+      return ;
+    }
+    switch(value.type){
+      case valueType.VT_String:
+        (_values[idx] as StringValue).value = (value as StringValue).value;
+        return;
+      case valueType.VT_Boolean:
+        (_values[idx] as BoolValue).value = (value as BoolValue).value;
+        return;
+      case valueType.VT_Int:
+        (_values[idx] as IntValue).value = (value as IntValue).value;
+        return;
+      case valueType.VT_Double:
+        (_values[idx] as DoubleValue).value = (value as DoubleValue).value;
+        return;
+      case valueType.VT_DateTime:
+        (_values[idx] as DateTimeValue).value = (value as DateTimeValue).value;
+        return;
+    }
+    _values[idx] = value;
+  }
+
+  void setKeyValue(String key,Object value){
+    if(_isArray){
+      return ;
+    }
+    if(value == null){
+      int idx = _newKeyIndex(key);
+      _values[idx] = null;
+      return;
+    }
+    if (value is String){
+      setKeyString(key, value);
+      return ;
+    }
+    if (value is int){
+      setKeyInt(key, value);
+      return ;
+    }
+
+    if (value is double){
+      setKeyDouble(key, value);
+      return ;
+    }
+
+    if (value is bool){
+      setKeyBool(key,value);
+      return ;
+    }
+
+    if(value is DxValueMarshal){
+      int idx = _newKeyIndex(key);
+      _values[idx] = value.toDxValue();
+      return;
+    }
+
+    if (value is BaseValue){
+      setKeyDxValue(key,value);
+      return ;
+    }
+
+  }
 }
 
