@@ -9,6 +9,17 @@ import 'package:dxvalue/dxvalue.dart';
 
 void main() {
   test("test dxValue",(){
+
+    print(int.tryParse("23",radix: 16));
+
+    DxValue mb = DxValue(true);
+    mb.forceValue("0/dxsoft/gg");
+    print(mb);
+    DxValue namemb = mb.forceValue("0/dxsoft/gg/dxsoft");
+    namemb.setKeyInt("Age", 23);
+    namemb.setKeyString("Name", "测试人");
+    print(mb);
+
     DxValue dxvalue = DxValue(false);
     dxvalue.setKeyValue("Name", "不得闲");
     dxvalue.setKeyValue("Age", 32);

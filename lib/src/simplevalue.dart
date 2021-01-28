@@ -55,7 +55,7 @@ abstract class BaseValue extends Iterable<KeyValue>{
         if ((this as StringValue).value == null){
           return defValue;
         }
-        return int.tryParse((this as StringValue).value,radix: defValue);
+        return int.tryParse((this as StringValue).value)??defValue;
     }
     return defValue;
   }
@@ -129,7 +129,7 @@ class IntValue  extends BaseValue{
   get type => valueType.VT_Int;
 
   IntValue.fromString(String vStr){
-    value = int.tryParse(vStr,radix: value);
+    value = int.tryParse(vStr)??value;
   }
 
   bool operator == (Object other){
@@ -394,6 +394,5 @@ class BinaryValue extends BaseValue{
   @override
   get type => valueType.VT_Binary;
 
-  Uint8List asBytes() => binary;
 
 }

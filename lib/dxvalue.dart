@@ -197,24 +197,32 @@ class DxValue extends BaseValue{
   }
 
   BaseValue valueByKey(String key,[bool ignoreCase=true]){
+    int index = _keyIndex(key,ignoreCase);
+    if(index != -1){
+      return _values[index];
+    }
+    return null;
+  }
+
+  int _keyIndex(String key,[bool ignoreCase=true]){
     if(_isArray || key == null || key.length == 0){
-      return null;
+      return -1;
     }
     if(ignoreCase){
       key = key.toLowerCase();
       for(var i = 0;i<_keys.length;i++){
         if(key.compareTo(_keys[i].toLowerCase()) == 0){
-          return _values[i];
+          return i;
         }
       }
     }else{
       for(var i = 0;i<_keys.length;i++){
         if(key == _keys[i]){
-          return _values[i];
+          return i;
         }
       }
     }
-    return null;
+    return -1;
   }
 
   BaseValue valueByIndex(int index){
@@ -377,14 +385,12 @@ class DxValue extends BaseValue{
       setKeyInt(key, value);
       return ;
     }
-
-    if (value is double){
-      setKeyDouble(key, value);
-      return ;
-    }
-
     if (value is bool){
       setKeyBool(key,value);
+      return ;
+    }
+    if (value is double){
+      setKeyDouble(key, value);
       return ;
     }
 
@@ -399,6 +405,54 @@ class DxValue extends BaseValue{
       return ;
     }
 
+  }
+
+  @override
+  int get length => _values.length;
+
+  DxValue forceValue(String path,{bool arrayValue=false,String separator="/"}){
+    if(path == ""){
+      return null;
+    }
+    List<String> paths = path.split(separator);
+    DxValue parentValue;
+    parentValue = this;
+    for(var i = 0;i<paths.length;i++){
+      if (parentValue._isArray){
+        int idx = int.tryParse(paths[i])??-1;
+        if(idx == -1 || idx > parentValue.length - 1){ //不符合，需要替换
+          if(i == 0){
+            if(idx == 0 && parentValue.length == 0){
+              parentValue = parentValue.newObject();
+              continue;
+            }
+            return null;
+          }
+          parentValue = parentValue.newObject(key: paths[i]);
+        }else{
+          //在中间
+          if(parentValue._values[idx] == null || !(parentValue._values[idx] is DxValue)){
+            var newValue = DxValue(false);
+            parentValue._values[idx] = newValue;
+            parentValue = newValue;
+          }else{
+            parentValue = parentValue._values[idx];
+          }
+        }
+        continue;
+      }
+       var index = parentValue._keyIndex(paths[i]);
+       if (index == -1){
+         parentValue = parentValue.newObject(key: paths[i]);
+       }else if(parentValue._values[index] == null || !(parentValue._values[index] is DxValue)){
+         var newValue = DxValue(false);
+         parentValue._values[index] = newValue;
+         parentValue = newValue;
+       }else{
+         parentValue = parentValue._values[index];
+       }
+    }
+    return parentValue;
   }
 }
 
