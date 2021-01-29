@@ -177,7 +177,7 @@ class DxValue extends BaseValue{
       _values.add(v);
       return v;
     }
-    if(key??"" == ""){
+    if((key??"") == ""){
       return null;
     }
     for(var i = 0;i<_values.length;i++){
@@ -282,6 +282,11 @@ class DxValue extends BaseValue{
   }
 
   void clear(){
+    for(var i = 0;i<_values.length;i++){
+      if(_values[i] != null && _values[i] is DxValue){
+        (_values[i] as DxValue).clear();
+      }
+    }
     _values.clear();
     if(_keys != null){
       _keys.clear();
@@ -334,6 +339,18 @@ class DxValue extends BaseValue{
       return;
     }
     _values[idx] = BoolValue(value: value);
+  }
+
+  void setKeyDateTime(String key,DateTime value){
+    if(_isArray){
+      return ;
+    }
+    int idx = _newKeyIndex(key);
+    if(_values[idx] != null && _values[idx] is DateTimeValue){
+      (_values[idx] as DateTimeValue).value = value;
+      return;
+    }
+    _values[idx] = DateTimeValue(value: value);
   }
 
   void setKeyDxValue(String key,BaseValue value){
@@ -393,6 +410,10 @@ class DxValue extends BaseValue{
       setKeyDouble(key, value);
       return ;
     }
+    if(value is DateTime){
+      setKeyDateTime(key, value);
+      return ;
+    }
 
     if(value is DxValueMarshal){
       int idx = _newKeyIndex(key);
@@ -415,12 +436,17 @@ class DxValue extends BaseValue{
       return null;
     }
     List<String> paths = path.split(separator);
+    return forcePath(paths,arrayValue);
+  }
+
+  DxValue forcePath(List<String> paths,[bool arrayValue=false]){
     DxValue parentValue;
     parentValue = this;
     for(var i = 0;i<paths.length;i++){
       if (parentValue._isArray){
         int idx = int.tryParse(paths[i])??-1;
-        if(idx == -1 || idx > parentValue.length - 1){ //不符合，需要替换
+        bool canArray = idx != -1;
+        if(!canArray || idx > parentValue.length - 1){ //不符合，需要替换
           if(i == 0){
             if(idx == 0 && parentValue.length == 0){
               parentValue = parentValue.newObject();
@@ -428,11 +454,25 @@ class DxValue extends BaseValue{
             }
             return null;
           }
+          if(!canArray){
+            parentValue._isArray = false;
+            parentValue._values.clear();
+            parentValue._keys = List<String>();
+          }
+          if(i == paths.length - 1 && arrayValue){
+            parentValue = parentValue.newArray(key: paths[i]);
+            return parentValue;
+          }
           parentValue = parentValue.newObject(key: paths[i]);
         }else{
           //在中间
           if(parentValue._values[idx] == null || !(parentValue._values[idx] is DxValue)){
-            var newValue = DxValue(false);
+            DxValue newValue;
+            if(i == paths.length - 1){
+              newValue = DxValue(arrayValue);
+            }else{
+              newValue = DxValue(false);
+            }
             parentValue._values[idx] = newValue;
             parentValue = newValue;
           }else{
@@ -441,18 +481,112 @@ class DxValue extends BaseValue{
         }
         continue;
       }
-       var index = parentValue._keyIndex(paths[i]);
-       if (index == -1){
-         parentValue = parentValue.newObject(key: paths[i]);
-       }else if(parentValue._values[index] == null || !(parentValue._values[index] is DxValue)){
-         var newValue = DxValue(false);
-         parentValue._values[index] = newValue;
-         parentValue = newValue;
-       }else{
-         parentValue = parentValue._values[index];
-       }
+      var index = parentValue._keyIndex(paths[i]);
+      if (index == -1){
+        if(i == paths.length - 1){
+          if(arrayValue){
+            return parentValue.newArray(key: paths[i]);
+          }
+          return parentValue.newObject(key: paths[i]);
+        }
+        parentValue = parentValue.newObject(key: paths[i]);
+      }else if(parentValue._values[index] == null || !(parentValue._values[index] is DxValue)){
+        DxValue newValue;
+        if(i == paths.length - 1){
+          newValue = DxValue(arrayValue);
+        }else{
+          newValue = DxValue(false);
+        }
+        parentValue._values[index] = newValue;
+        parentValue = newValue;
+      }else if (i < paths.length - 1){
+        parentValue = parentValue._values[index];
+      }else {
+        if (parentValue._values[index] != null && parentValue._values[index] is DxValue){
+          parentValue = parentValue._values[index];
+          if(parentValue._isArray != arrayValue){
+            parentValue._isArray = arrayValue;
+            if(!parentValue._isArray){
+              parentValue._keys = null;
+            }else{
+              parentValue._values.clear();
+              parentValue._keys = List<String>();
+            }
+          }
+          return parentValue;
+        }
+        DxValue newValue = DxValue(arrayValue);
+        parentValue._values[index] = newValue;
+        parentValue = newValue;
+        return parentValue;
+      }
     }
     return parentValue;
+  }
+
+  forceInt(String path,int value,[String separator="/"]){
+    if((path??"") == ""){
+      return ;
+    }
+    List<String> paths = path.split(separator);
+    if(paths.length == 1){
+      setKeyInt(path, value);
+      return ;
+    }
+    DxValue objValue = forcePath(paths.sublist(0,paths.length - 1));
+    objValue.setKeyInt(paths[paths.length - 1], value);
+  }
+
+  forceBool(String path,bool value,[String separator="/"]){
+    if((path??"") == ""){
+      return ;
+    }
+    List<String> paths = path.split(separator);
+    if(paths.length == 1){
+      setKeyBool(path, value);
+      return ;
+    }
+    DxValue objValue = forcePath(paths.sublist(0,paths.length - 1));
+    objValue.setKeyBool(paths[paths.length - 1], value);
+  }
+
+  forceString(String path,String value,[String separator="/"]){
+    if((path??"") == ""){
+      return ;
+    }
+    List<String> paths = path.split(separator);
+    if(paths.length == 1){
+      setKeyString(path, value);
+      return ;
+    }
+    DxValue objValue = forcePath(paths.sublist(0,paths.length - 1));
+    objValue.setKeyString(paths[paths.length - 1], value);
+  }
+
+  forceDouble(String path,double value,[String separator="/"]){
+    if((path??"") == ""){
+      return ;
+    }
+    List<String> paths = path.split(separator);
+    if(paths.length == 1){
+      setKeyDouble(path, value);
+      return ;
+    }
+    DxValue objValue = forcePath(paths.sublist(0,paths.length - 1));
+    objValue.setKeyDouble(paths[paths.length - 1], value);
+  }
+
+  forceDateTime(String path,DateTime value,[String separator="/"]){
+    if((path??"") == ""){
+      return ;
+    }
+    List<String> paths = path.split(separator);
+    if(paths.length == 1){
+      setKeyDateTime(path, value);
+      return ;
+    }
+    DxValue objValue = forcePath(paths.sublist(0,paths.length - 1));
+    objValue.setKeyDateTime(paths[paths.length - 1], value);
   }
 }
 

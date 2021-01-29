@@ -13,11 +13,15 @@ void main() {
     print(int.tryParse("23",radix: 16));
 
     DxValue mb = DxValue(true);
-    mb.forceValue("0/dxsoft/gg");
+    mb.forceValue("0/dxsoft/gg",arrayValue: true);
+    print(mb);
+    mb.forceValue("0/dxsoft",arrayValue: true);
     print(mb);
     DxValue namemb = mb.forceValue("0/dxsoft/gg/dxsoft");
     namemb.setKeyInt("Age", 23);
     namemb.setKeyString("Name", "测试人");
+    print(mb);
+    mb.forceInt("0/dxsoft/gg", 32);
     print(mb);
 
     DxValue dxvalue = DxValue(false);
