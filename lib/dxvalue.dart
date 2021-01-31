@@ -305,6 +305,22 @@ class DxValue extends BaseValue{
     _values[idx] = IntValue(value: value);
   }
 
+  void setIndexInt(int index,int value){
+    if(!_isArray){
+      return ;
+    }
+
+    if(index < 0 || index > _values.length - 1){
+      _values.add(IntValue(value: value));
+      return ;
+    }
+    if(_values[index] != null && _values[index] is IntValue){
+      (_values[index] as IntValue).value = value;
+      return;
+    }
+    _values[index] = IntValue(value: value);
+  }
+
   void setKeyString(String key,String value){
     if(_isArray){
       return ;
@@ -315,6 +331,22 @@ class DxValue extends BaseValue{
       return;
     }
     _values[idx] = StringValue(value: value);
+  }
+
+  void setIndexString(int index,String value){
+    if(!_isArray){
+      return ;
+    }
+
+    if(index < 0 || index > _values.length - 1){
+      _values.add(StringValue(value: value));
+      return ;
+    }
+    if(_values[index] != null && _values[index] is IntValue){
+      (_values[index] as StringValue).value = value;
+      return;
+    }
+    _values[index] = StringValue(value: value);
   }
 
   void setKeyDouble(String key,double value){
@@ -329,6 +361,22 @@ class DxValue extends BaseValue{
     _values[idx] = DoubleValue(value: value);
   }
 
+  void setIndexDouble(int index,double value){
+    if(!_isArray){
+      return ;
+    }
+
+    if(index < 0 || index > _values.length - 1){
+      _values.add(DoubleValue(value: value));
+      return ;
+    }
+    if(_values[index] != null && _values[index] is IntValue){
+      (_values[index] as DoubleValue).value = value;
+      return;
+    }
+    _values[index] = DoubleValue(value: value);
+  }
+
   void setKeyBool(String key,bool value){
     if(_isArray){
       return ;
@@ -339,6 +387,22 @@ class DxValue extends BaseValue{
       return;
     }
     _values[idx] = BoolValue(value: value);
+  }
+
+  void setIndexBool(int index,bool value){
+    if(!_isArray){
+      return ;
+    }
+
+    if(index < 0 || index > _values.length - 1){
+      _values.add(BoolValue(value: value));
+      return ;
+    }
+    if(_values[index] != null && _values[index] is IntValue){
+      (_values[index] as BoolValue).value = value;
+      return;
+    }
+    _values[index] = BoolValue(value: value);
   }
 
   void setKeyDateTime(String key,DateTime value){
@@ -353,8 +417,23 @@ class DxValue extends BaseValue{
     _values[idx] = DateTimeValue(value: value);
   }
 
-  void setKeyDxValue(String key,BaseValue value){
-    int idx = _newKeyIndex(key);
+  void setIndexDateTime(int index,DateTime value){
+    if(!_isArray){
+      return ;
+    }
+
+    if(index < 0 || index > _values.length - 1){
+      _values.add(DateTimeValue(value: value));
+      return ;
+    }
+    if(_values[index] != null && _values[index] is IntValue){
+      (_values[index] as DateTimeValue).value = value;
+      return;
+    }
+    _values[index] = DateTimeValue(value: value);
+  }
+
+  void _innerSetIndexValue(int idx,BaseValue value){
     bool oldIsNull = (_values[idx]?.type)??(valueType.VT_Null) == valueType.VT_Null;
     valueType vt = value.type;
     if (vt == valueType.VT_Null){
@@ -383,6 +462,21 @@ class DxValue extends BaseValue{
         return;
     }
     _values[idx] = value;
+  }
+
+  void setKeyDxValue(String key,BaseValue value){
+    _innerSetIndexValue(_newKeyIndex(key),value);
+  }
+
+  void setIndexDxValue(int index,BaseValue value){
+    if(!_isArray){
+      return ;
+    }
+    if(index < 0 || index > _values.length - 1){
+      _values.add(value);
+      return;
+    }
+    _innerSetIndexValue(index,value);
   }
 
   void setKeyValue(String key,Object value){
@@ -425,7 +519,6 @@ class DxValue extends BaseValue{
       setKeyDxValue(key,value);
       return ;
     }
-
   }
 
   @override

@@ -5,15 +5,43 @@ import 'dart:typed_data';
 import 'package:dxvalue/src/json/jsonparse.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:dxlibrary/dxlibrary.dart';
 
 import 'package:dxvalue/dxvalue.dart';
 
 void main() {
-  String st = '{   "Name": false, "b\\u6d4b\\u8bd5\\u4e2da":"asdf","\\u6587\\u8f6c\\u6362":23.34}';
+  /*String st = '{   "Name": false, "b\\u6d4b\\u8bd5\\u4e2da":"asdf","\\u6587\\u8f6c\\u6362":23.34}';
   print(st);
   var parse = JsonParse(Uint8List.fromList(st.codeUnits));
-  print(parse.parse()) ;
-
+  print(parse.parse()) ;*/
+  String st = """
+{
+  "Author": "辰东",
+  "Age": 40,
+  "Books":[
+     {
+        "Name": "遮天",
+        "Pages": 13234,
+        "Start": "2013-9-20",
+        "publish":["17K","红袖添香","轻舞飞扬","越岳飞"]
+     },
+     {
+        "Name": "神墓",
+        "Pages": 1324,
+        "Start": "2008-9-20",
+        "publish":[
+          "17K","红袖添香",
+          {
+            "Name": "阅文集团",
+            "Month":12
+          }
+        ]
+     }
+  ]
+}  
+  """;
+  JsonParse parse = JsonParse.fromString(st);
+  print(parse.parse());
 
   test("test dxValue",(){
     print(int.tryParse("23",radix: 16));

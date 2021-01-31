@@ -6,31 +6,29 @@ import 'dart:typed_data';
 import 'package:dxvalue/dxvalue.dart';
 import 'package:dxlibrary/dxlibrary.dart';
 
-//json中字符串的标记格式内容
-enum stringStyle{
-  str_Utf8,
-  str_Unicode,
-  str_Utf16,
-}
-
 class JsonParse{
-  final Uint8List _dataList;
-  final stringStyle _strStyle;
+  Uint8List _dataList;
   int _offset=0;
-
-  JsonParse(this._dataList,[this._strStyle=stringStyle.str_Utf8]);
-  JsonParse.fromList(List<int> l,[stringStyle strStyle=stringStyle.str_Utf8]): this(Uint8List.fromList(l),strStyle);
-
-
+  JsonParse(this._dataList);
+  JsonParse.fromString(String jsonStr): _dataList=jsonStr.toUtf8();
   void _skipWhiteSpace(){
     int maxLen = _dataList.length;
     while(_offset < maxLen){
       int bt = _dataList[_offset];
-      if(bt != 0x20 && bt != 0x13 && bt != 0x10 && bt != 0x09){ // 空格，回车换行和Tab
+      if(bt != 0x20 && bt != 0x0D && bt != 0x0A && bt != 0x09){ // 空格，回车换行和Tab
         return;
       }
       _offset++;
     }
+  }
+
+  void reset(Uint8List utf8data){
+    _dataList = utf8data;
+    _offset = 0;
+  }
+
+  void resetJsonString(String jsonStr){
+    reset(jsonStr.toUtf8());
   }
 
   DxValue parse(){
@@ -67,7 +65,6 @@ class JsonParse{
     bool isEscape = false;
     bool isUnicode = false;
     int _strIndex = _offset;
-    //new Runes(string)
     bool isByteList = true;
     List<int> byteList = List<int>(); //uint8
     int unicodeCount = 0; //记录unicode
@@ -230,21 +227,31 @@ class JsonParse{
     throw FormatException("解析字符串数据异常，位置$_offset");
   }
 
-  void _parseObjValue(DxValue parent, String key){
+  void _parseObjValue(DxValue parent, [String key]){
     _skipWhiteSpace();
     int charCode = _dataList[_offset];
     switch(charCode){
       case 0x22:
         //字符串
         String value = _readString();
-        parent.setKeyString(key, value);
+        if(key == null){
+          parent.setIndexString(-1, value);
+        }else{
+          parent.setKeyString(key, value);
+        }
         break;
       case 0x5B:
       //[ 数组开始
       //] 0x5D
+        _offset++;
+        DxValue value = parent.newArray(key: key);
+        parseArray(value);
         break;
       case 0x7B:
         //{对象  ,} 0x7D
+        _offset++;
+        DxValue value = parent.newObject(key: key);
+        parseObject(value);
         break;
       default:
         //数字或者bool类型
@@ -259,13 +266,21 @@ class JsonParse{
               continue;
             }
             if((_dataList[i] < 0x30 || _dataList[i] > 0x39)){
-              if(_dataList[i] == 0x20 || _dataList[i] == 0x2C || _dataList[i] == 0x5D || _dataList[i] == 0x7D){
+              if(_dataList[i] == 0x20 || _dataList[i] == 0x0A || _dataList[i] == 0x0D || _dataList[i] == 0x2C || _dataList[i] == 0x5D || _dataList[i] == 0x7D){
                 //OK的
                 String numValue = String.fromCharCodes(_dataList.sublist(_offset,i));
-                if(dotCount > 0){
-                  parent.setKeyDouble(key, double.tryParse(numValue));
+                if(key == null){
+                  if(dotCount > 0){
+                    parent.setIndexDouble(-1, double.tryParse(numValue));
+                  }else{
+                    parent.setIndexInt(-1, int.tryParse(numValue));
+                  }
                 }else{
-                  parent.setKeyInt(key, int.tryParse(numValue));
+                  if(dotCount > 0){
+                    parent.setKeyDouble(key, double.tryParse(numValue));
+                  }else{
+                    parent.setKeyInt(key, int.tryParse(numValue));
+                  }
                 }
                 _offset = i;
                 return;
@@ -281,8 +296,13 @@ class JsonParse{
           }
           if(_dataList[_offset] == 0x74 && _dataList[_offset+1] == 0x72 && _dataList[_offset+2] == 0x75 && _dataList[_offset+3] == 0x65){
              //true,判定下一位是否是有效的
-            if(_dataList[_offset+4] == 0x20 || _dataList[_offset+4] == 0x2C || _dataList[_offset+4] == 0x5D || _dataList[_offset+4] == 0x7D){
-              parent.setKeyBool(key, true);
+            if(_dataList[_offset+4] == 0x20 || _dataList[_offset+4] == 0x0A || _dataList[_offset+4] == 0x0D  ||
+                _dataList[_offset+4] == 0x2C || _dataList[_offset+4] == 0x5D || _dataList[_offset+4] == 0x7D){
+              if(key == null){
+                parent.setIndexBool(-1, true);
+              }else{
+                parent.setKeyBool(key, true);
+              }
               _offset += 4;
               break;
             }
@@ -295,8 +315,13 @@ class JsonParse{
           }
           if(_dataList[_offset] == 0x66 && _dataList[_offset+1] == 0x61 && _dataList[_offset+2] == 0x6c && _dataList[_offset+3] == 0x73 && _dataList[_offset+4] == 0x65){
             //false,判定下一位是否是有效的
-            if(_dataList[_offset+5] == 0x20 || _dataList[_offset+5] == 0x2C || _dataList[_offset+5] == 0x5D || _dataList[_offset+5] == 0x7D){
-              parent.setKeyBool(key, false);
+            if(_dataList[_offset+5] == 0x20 || _dataList[_offset+4] == 0x0A || _dataList[_offset+4] == 0x0D ||
+                _dataList[_offset+5] == 0x2C || _dataList[_offset+5] == 0x5D || _dataList[_offset+5] == 0x7D){
+              if(key == null){
+                parent.setIndexBool(-1, false);
+              }else {
+                parent.setKeyBool(key, false);
+              }
               _offset += 5;
               break;
             }
@@ -339,9 +364,34 @@ class JsonParse{
       _offset++;
       _parseObjValue(value, key);
     }
+    throw FormatException("无效的Json格式$_offset,未发现分隔符,");
   }
 
   void parseArray(DxValue value){
-
+    value.clear();
+    int maxLen = _dataList.length;
+    bool isFirst = true;
+    while(_offset < maxLen){
+      _skipWhiteSpace();
+      int charCode = _dataList[_offset];
+      if(charCode == 0x5D){
+        //对象解析完毕
+        _offset++;
+        return;
+      }else if (charCode == 0x2C){
+        //没有发现,，没有其他值
+        if(isFirst){
+          throw FormatException("无效的Json格式$_offset,未发现分隔符,");
+        }
+        _offset++;
+      }else if(!isFirst){
+        throw FormatException("无效的Json格式$_offset,未发现分隔符,");
+      }else{
+        isFirst = false;
+      }
+      //解析数组值
+      _parseObjValue(value);
+    }
+    throw FormatException("无效的Json格式$_offset,未发现分隔符,");
   }
 }
