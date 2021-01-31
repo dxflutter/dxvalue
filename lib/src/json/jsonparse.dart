@@ -266,7 +266,8 @@ class JsonParse{
               continue;
             }
             if((_dataList[i] < 0x30 || _dataList[i] > 0x39)){
-              if(_dataList[i] == 0x20 || _dataList[i] == 0x0A || _dataList[i] == 0x0D || _dataList[i] == 0x2C || _dataList[i] == 0x5D || _dataList[i] == 0x7D){
+              if(_dataList[i] == 0x20 || _dataList[i] == 0x0A || _dataList[i] == 0x0D || _dataList[i] == 0x09 ||
+                  _dataList[i] == 0x2C || _dataList[i] == 0x5D || _dataList[i] == 0x7D){
                 //OK的
                 String numValue = String.fromCharCodes(_dataList.sublist(_offset,i));
                 if(key == null){
@@ -296,7 +297,7 @@ class JsonParse{
           }
           if(_dataList[_offset] == 0x74 && _dataList[_offset+1] == 0x72 && _dataList[_offset+2] == 0x75 && _dataList[_offset+3] == 0x65){
              //true,判定下一位是否是有效的
-            if(_dataList[_offset+4] == 0x20 || _dataList[_offset+4] == 0x0A || _dataList[_offset+4] == 0x0D  ||
+            if(_dataList[_offset+4] == 0x20 || _dataList[_offset+4] == 0x0A || _dataList[_offset+4] == 0x0D  || _dataList[_offset+4] == 0x09 ||
                 _dataList[_offset+4] == 0x2C || _dataList[_offset+4] == 0x5D || _dataList[_offset+4] == 0x7D){
               if(key == null){
                 parent.setIndexBool(-1, true);
@@ -315,7 +316,7 @@ class JsonParse{
           }
           if(_dataList[_offset] == 0x66 && _dataList[_offset+1] == 0x61 && _dataList[_offset+2] == 0x6c && _dataList[_offset+3] == 0x73 && _dataList[_offset+4] == 0x65){
             //false,判定下一位是否是有效的
-            if(_dataList[_offset+5] == 0x20 || _dataList[_offset+4] == 0x0A || _dataList[_offset+4] == 0x0D ||
+            if(_dataList[_offset+5] == 0x20 || _dataList[_offset+5] == 0x0A || _dataList[_offset+5] == 0x0D || _dataList[_offset+5] == 0x09 ||
                 _dataList[_offset+5] == 0x2C || _dataList[_offset+5] == 0x5D || _dataList[_offset+5] == 0x7D){
               if(key == null){
                 parent.setIndexBool(-1, false);
