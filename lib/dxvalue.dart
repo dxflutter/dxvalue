@@ -580,6 +580,7 @@ class DxValue extends BaseValue{
     if((path??"") == ""){
       return ;
     }
+
     List<String> paths = path.split(separator);
     if(paths.length == 1){
       setKeyDateTime(path, value);
