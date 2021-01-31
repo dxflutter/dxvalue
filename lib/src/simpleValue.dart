@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'dart:typed_data';
 
 enum valueType{
@@ -21,8 +20,8 @@ abstract class DxValueMarshal{
 }
 
 class KeyValue {
-  final String key;
-  final BaseValue value;
+  String key;
+  BaseValue value;
   KeyValue(this.key,this.value);
   @override
   String toString(){

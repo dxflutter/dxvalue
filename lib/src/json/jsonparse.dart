@@ -1,10 +1,7 @@
-
-import 'dart:ffi';
 import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:dxvalue/dxvalue.dart';
-import 'package:dxlibrary/dxlibrary.dart';
 
 class JsonParse{
   Uint8List _dataList;
@@ -20,6 +17,18 @@ class JsonParse{
       }
       _offset++;
     }
+  }
+
+  bool isObject([bool skipCheck=true]){
+    int oldIndex = _offset;
+    _skipWhiteSpace();
+    bool result = _dataList[_offset] == 0x7B;
+    if(skipCheck){
+      _offset++;
+    }else{
+      _offset = oldIndex;
+    }
+    return result;
   }
 
   void reset(Uint8List utf8data){
@@ -226,7 +235,7 @@ class JsonParse{
     _offset = _strIndex;
     throw FormatException("解析字符串数据异常，位置$_offset");
   }
-
+  
   void _parseObjValue(DxValue parent, [String key]){
     _skipWhiteSpace();
     int charCode = _dataList[_offset];
@@ -234,6 +243,19 @@ class JsonParse{
       case 0x22:
         //字符串
         String value = _readString();
+        if(value.startsWith("/Date(") && value.endsWith(")/")){
+          //是日期时间
+          String unix = value.substring(6,value.length - 2);
+          int milsecs = int.tryParse(unix);
+          if(milsecs != null){
+            if(key == null){
+              parent.setIndexDateTime(-1, DateTime.fromMillisecondsSinceEpoch(milsecs));
+            }else{
+              parent.setKeyDateTime(key, DateTime.fromMillisecondsSinceEpoch(milsecs));
+            }
+            break;
+          }
+        }
         if(key == null){
           parent.setIndexString(-1, value);
         }else{
@@ -394,5 +416,186 @@ class JsonParse{
       _parseObjValue(value);
     }
     throw FormatException("无效的Json格式$_offset,未发现分隔符,");
+  }
+}
+
+class JsonEncoder{
+  static void _encodeUnicode(StringBuffer stringBuffer,String value){
+    Runes runes = value.runes;
+    for(var rune in runes){
+      if(rune>128){
+        stringBuffer.write('\\u');
+        stringBuffer.write(rune.toRadixString(16));
+      }else{
+        stringBuffer.writeCharCode(rune);
+      }
+    }
+  }
+
+  static String _encodeFormat(DxValue value,int level,[bool encodeUnicode=false]){
+    StringBuffer stringBuffer = StringBuffer();
+    bool isFirst = true;
+    Uint8List levelBytes = Uint8List(level+1);
+    for (var i = 0;i <= level;i++){
+      levelBytes[i] = 32;
+    }
+    String keyLevel = String.fromCharCodes(levelBytes);
+    String rootLevel = "";
+    if(level > 0){
+      rootLevel = String.fromCharCodes(levelBytes,0,level);
+    }
+    Function writeValueObject = (BaseValue value){
+      if(value == null){
+        stringBuffer.write('null');
+        return;
+      }
+      valueType vType = value.type;
+      switch(vType){
+        case valueType.VT_String:
+          stringBuffer.write('"');
+          if(encodeUnicode){
+            _encodeUnicode(stringBuffer,(value as StringValue).value);
+          }else{
+            stringBuffer.write((value as StringValue).value);
+          }
+          stringBuffer.write('"');
+          break;
+        case valueType.VT_DateTime:
+          stringBuffer.write('"/Date(');
+          //(kv.value as StringValue).value.runes
+          //   /Date(unix)/
+          stringBuffer.write((value as DateTimeValue).value.millisecondsSinceEpoch);
+          stringBuffer.write(')/"');
+          break;
+        case valueType.VT_Object:
+        case valueType.VT_Array:
+          stringBuffer.write(_encodeFormat(value, level+1,encodeUnicode));
+          break;
+        default:
+          stringBuffer.write(value);
+      }
+    };
+
+    if(value.type == valueType.VT_Array){
+      stringBuffer.write('[\r\n');
+      for(var kv in value){
+        if(isFirst){
+          isFirst = false;
+        }else{
+          stringBuffer.write(',\r\n');
+        }
+        stringBuffer.write(keyLevel);
+        writeValueObject(kv.value);
+      }
+      stringBuffer.write('\r\n');
+      if(level > 0){
+        stringBuffer.write(rootLevel);
+      }
+      stringBuffer.write(']');
+    }else{
+      stringBuffer.write('{\r\n');
+      for(var kv in value){
+        if(isFirst){
+          isFirst = false;
+        }else{
+          stringBuffer.write(',\r\n');
+        }
+        stringBuffer.write(keyLevel);
+        stringBuffer.write('"');
+        if(encodeUnicode){
+          _encodeUnicode(stringBuffer,kv.key);
+        }else{
+          stringBuffer.write(kv.key);
+        }
+        stringBuffer.write('":');
+        writeValueObject(kv.value);
+      }
+      stringBuffer.write('\r\n');
+      if(level > 0){
+        stringBuffer.write(rootLevel);
+      }
+      stringBuffer.write('}');
+    }
+    return stringBuffer.toString();
+  }
+
+  static String encode(DxValue value,{bool format=true,bool encodeUnicode=true}){
+    if(format){
+      return _encodeFormat(value, 0,encodeUnicode);
+    }
+
+    StringBuffer stringBuffer = StringBuffer();
+    bool isFirst = true;
+    Function writeValueObject = (BaseValue value){
+      if(value == null){
+        stringBuffer.write('null');
+        return;
+      }
+      valueType vType = value.type;
+      switch(vType){
+        case valueType.VT_String:
+          stringBuffer.write('"');
+          if(encodeUnicode){
+            _encodeUnicode(stringBuffer,(value as StringValue).value);
+          }else{
+            stringBuffer.write((value as StringValue).value);
+          }
+          stringBuffer.write('"');
+          break;
+        case valueType.VT_DateTime:
+          stringBuffer.write('"/Date(');
+          //(kv.value as StringValue).value.runes
+          //   /Date(unix)/
+          stringBuffer.write((value as DateTimeValue).value.millisecondsSinceEpoch);
+          stringBuffer.write(')/"');
+          break;
+        case valueType.VT_Object:
+        case valueType.VT_Array:
+          stringBuffer.write(encode(value,format: false));
+          break;
+        default:
+          stringBuffer.write(value);
+      }
+    };
+
+    if(value.type == valueType.VT_Array){
+      stringBuffer.write('[');
+      for(var kv in value){
+        if(isFirst){
+          isFirst = false;
+        }else{
+          stringBuffer.write(',');
+        }
+        writeValueObject(kv.value);
+      }
+      stringBuffer.write(']');
+    }else{
+      stringBuffer.write('{');
+      for(var kv in value){
+        if(isFirst){
+          isFirst = false;
+        }else{
+          stringBuffer.write(',');
+        }
+        stringBuffer.write('"');
+        if(encodeUnicode){
+          _encodeUnicode(stringBuffer,kv.key);
+        }else{
+          stringBuffer.write(kv.key);
+        }
+        stringBuffer.write('":');
+        writeValueObject(kv.value);
+      }
+      stringBuffer.write('}');
+    }
+    return stringBuffer.toString();
+  }
+
+  static Uint8List toU8List(DxValue value,{bool format=true,bool utf8=false}){
+    String jsonString = encode(value,format: format,encodeUnicode: !utf8);
+    if(utf8){
+      return Uint8List.fromList(jsonString.toUtf8());
+    }
+    return Uint8List.fromList(jsonString.codeUnits);
   }
 }

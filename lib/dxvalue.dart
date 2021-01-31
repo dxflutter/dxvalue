@@ -1,28 +1,72 @@
 library dxvalue;
-
-import 'dart:io';
+import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:dxlibrary/dxlibrary.dart';
-import 'src/simplevalue.dart';
+import 'package:dxvalue/src/json/jsonparse.dart';
+import 'src/simpleValue.dart';
 
-export 'src/simplevalue.dart';
+export 'src/simpleValue.dart';
 
+extension Uint8ListOnString on String {
+  Uint8List toU8List([Endian endian = Endian.big]){
+    List<int> lst = codeUnits;
+    ByteData bd = ByteData(lst.length * 2);
+    int index = 0;
+    for(var i = 0;i<lst.length;i++){
+      bd.setUint16(index, lst[i],endian);
+      index += 2;
+    }
+    return Uint8List.view(bd.buffer);
+  }
+
+  Uint8List toUtf8(){
+    return Utf8Encoder().convert(this);
+  }
+}
+
+extension extensionOnUint8List on Uint8List{
+  List<int> u8toU16List([Endian endian = Endian.big]){
+    int u16Len = length ~/ 2;
+    if(u16Len == 0){
+      return null;
+    }
+    ByteData bd = this.buffer.asByteData();
+    List<int> lst = List(u16Len);
+    int idx = 0;
+    for(var i = 0;i<length;i=i+2){
+      lst[idx] = bd.getUint16(i,endian);
+      idx++;
+    }
+    return lst;
+  }
+
+  String u8toString([Endian endian = Endian.big]){
+    List<int> u16Lst = u8toU16List(endian);
+    return u16Lst == null?"":String.fromCharCodes(u16Lst);
+  }
+
+  String utf8toString(){
+    return Utf8Decoder().convert(this);
+  }
+}
 
 class _DxValueIterator extends Iterator<KeyValue>{
   int _startIterator;
   final DxValue value;
+  KeyValue _keyValue;
   _DxValueIterator(this.value){
-    _startIterator = 0;
+    _startIterator = -1;
+    _keyValue = KeyValue("", null);
   }
   @override
   KeyValue get current{
+    _keyValue.value = value._values[_startIterator];
     if(value._isArray){
-      return KeyValue("", value._values[_startIterator]);
+      _keyValue.key = "";
+      return _keyValue;
     }
-    return KeyValue(value._keys[_startIterator], value._values[_startIterator]);
+    _keyValue.key = value._keys[_startIterator];
+    return _keyValue;
   }
 
   @override
@@ -31,7 +75,7 @@ class _DxValueIterator extends Iterator<KeyValue>{
     if(_startIterator < value._values.length){
       return true;
     }
-    _startIterator = 0;
+    _startIterator = -1;
     return false;
   }
 
@@ -136,12 +180,46 @@ class DxValue extends BaseValue{
     }
     return valueType.VT_Object;
   }
+
   DxValue(bool arrayValue){
     _isArray = arrayValue;
     _values = List<BaseValue>();
     if (!_isArray){
       _keys = List<String>();
     }
+  }
+
+  DxValue.fromJson(String jsonStr){
+    _values = List<BaseValue>();
+    JsonParse parse = JsonParse.fromString(jsonStr);
+    _isArray = !parse.isObject();
+    if (!_isArray){
+      _keys = List<String>();
+    }
+    parse.parseObject(this);
+  }
+
+  void resetFromJson(String jsonStr){
+    clear();
+    JsonParse parse = JsonParse.fromString(jsonStr);
+    _isArray = !parse.isObject();
+    if (!_isArray && _keys == null){
+      _keys = List<String>();
+    }else if (_isArray){
+      _keys = null;
+    }
+    parse.parseObject(this);
+  }
+
+  void resetFromJsonBytes(Uint8List u8List){
+    JsonParse parse = JsonParse(u8List);
+    _isArray = !parse.isObject();
+    if (!_isArray && _keys == null){
+      _keys = List<String>();
+    }else if (_isArray){
+      _keys = null;
+    }
+    parse.parseObject(this);
   }
 
   DxValue newObject({String key}){
@@ -279,6 +357,7 @@ class DxValue extends BaseValue{
   @override
   String toString(){
     return _jsonString(0);
+    //return JsonEncoder.encode(this,format: true);
   }
 
   void clear(){

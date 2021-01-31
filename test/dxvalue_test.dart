@@ -1,11 +1,8 @@
 import 'dart:convert';
-import 'dart:ffi';
 import 'dart:typed_data';
 
 import 'package:dxvalue/src/json/jsonparse.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:dxlibrary/dxlibrary.dart';
 
 import 'package:dxvalue/dxvalue.dart';
 
@@ -18,6 +15,7 @@ void main() {
 {
   "Author": "辰东",
   "Age": 40,
+  "Birth": "/Date(1612097634950)/",
   "Books":[
      {
         "Name": "遮天",
@@ -40,36 +38,34 @@ void main() {
   ]
 }  
   """;
-  JsonParse parse = JsonParse.fromString(st);
-  print(parse.parse());
-
   test("test dxValue",(){
-    print(int.tryParse("23",radix: 16));
-    DxValue mb = DxValue(true);
-    mb.forceValue("0/dxsoft/gg",arrayValue: true);
-    print(mb);
-    mb.forceValue("0/dxsoft",arrayValue: true);
-    print(mb);
-    DxValue namemb = mb.forceValue("0/dxsoft/gg/dxsoft");
-    namemb.setKeyInt("Age", 23);
-    namemb.setKeyString("Name", "测试人");
-    print(mb);
-    mb.forceInt("0/dxsoft/gg", 32);
-    print(mb);
+    DxValue strValue = DxValue.fromJson(st);
+    print(strValue);
+    st = JsonEncoder.encode(strValue);
+    print("------strvalue Is------\r\n"+st);
+    DxValue newValue = DxValue.fromJson(st);
+    print("------newValue Is------\r\n"+newValue.toString());
 
-    DxValue dxvalue = DxValue(false);
-    dxvalue.setKeyValue("Name", "不得闲");
-    dxvalue.setKeyValue("Age", 32);
-    dxvalue.setKeyValue("men", true);
-    var childvalue = dxvalue.newObject(key: "child");
-    childvalue.setKeyValue("Name", "child1");
-    childvalue.setKeyValue("Age", 3);
-    print(dxvalue);
-    print(dxvalue["Name"]);
-    print(dxvalue[1]);
+    Uint8List u8list = JsonEncoder.toU8List(newValue,format: true,utf8: false);
+    print(String.fromCharCodes(u8list));
 
-    for(KeyValue kv in dxvalue){
-      print(kv);
-    }
+    newValue.clear();
+
+    print("---JsonParse Unicode----");
+    newValue.resetFromJsonBytes(u8list);
+    print(newValue);
+
+
+
+    u8list = JsonEncoder.toU8List(newValue,format: true,utf8: true);
+    print("---utf8toString----");
+    print(u8list.utf8toString());
+
+    //parse.reset(u8list);
+    print("---JsonParse Utf8----");
+    newValue.clear();
+    newValue.resetFromJsonBytes(u8list);
+    print(newValue);
+    //print(parse.parse());
   });
 }
