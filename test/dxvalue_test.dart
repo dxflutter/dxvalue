@@ -2,15 +2,12 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:dxvalue/src/json/jsonparse.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:dxvalue/dxvalue.dart';
 
 void main() {
-  /*String st = '{   "Name": false, "b\\u6d4b\\u8bd5\\u4e2da":"asdf","\\u6587\\u8f6c\\u6362":23.34}';
-  print(st);
-  var parse = JsonParse(Uint8List.fromList(st.codeUnits));
-  print(parse.parse()) ;*/
   String st = """
 {
   "Author": "辰东",
@@ -66,6 +63,14 @@ void main() {
     newValue.clear();
     newValue.resetFromJsonBytes(u8list);
     print(newValue);
+
+    print(newValue.valueByKey("Author"));
+    print(newValue["Author"]);
     //print(parse.parse());
+
+    DxValue tempValue = DxValue(false);
+    DxValue record = tempValue.forcePath(["路径1","路径2","路径3"],false);
+    record.setKeyString("路径4", "测试数据");
+    print(tempValue);
   });
 }

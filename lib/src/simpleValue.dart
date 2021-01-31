@@ -118,6 +118,39 @@ abstract class BaseValue extends Iterable<KeyValue>{
   String asString(){
     return toString();
   }
+
+  Object operator +(Object other){
+    if(other is String || this is StringValue || other is StringValue){
+      return toString()+other.toString();
+    }
+    if(other is num){
+      if(this is IntValue){
+        return (this as IntValue).value??0 + other;
+      }
+      if(this is DoubleValue){
+        return (this as DoubleValue).value??0 + other;
+      }
+      throw FormatException("不支持的操作");
+    }
+    if(other is IntValue){
+      if(this is IntValue){
+        return (this as IntValue).value??0 + other.value;
+      }
+      if(this is DoubleValue){
+        return (this as DoubleValue).value??0 + other.value;
+      }
+      throw FormatException("不支持的操作");
+    }
+    if (other is DoubleValue){
+      if(this is IntValue){
+        return (this as IntValue).value??0 + other.value;
+      }
+      if(this is DoubleValue){
+        return (this as DoubleValue).value??0 + other.value;
+      }
+    }
+    throw FormatException("不支持的操作");
+  }
 }
 
 class IntValue  extends BaseValue{
@@ -319,7 +352,7 @@ class DateTimeValue extends BaseValue{
     return false;
   }
 
-  DateTime operator +(Duration other){
+  DateTime operator +(covariant Duration other){
     return (value??DateTime(0)).add(other);
   }
 
@@ -369,7 +402,7 @@ class StringValue extends BaseValue{
     return valueType.VT_String;
   }
 
-  String operator +(String other) => (value??"") + other;
+  String operator +(covariant String other) => (value??"") + other;
   bool operator == (Object other){
     if(other is StringValue){
       return value == other.value;
