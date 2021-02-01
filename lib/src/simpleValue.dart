@@ -1,3 +1,8 @@
+// author: 不得闲
+// email: 75492895@qq.com
+// date: 2021-01-20
+// 万能值对象基类BaseValue
+
 import 'dart:typed_data';
 
 enum valueType{

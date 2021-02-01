@@ -1,7 +1,14 @@
+// author: 不得闲
+// email: 75492895@qq.com
+// date: 2021-01-20
+// 万能值对象的Json的编码和解码功能
+
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:dxvalue/dxvalue.dart';
+import 'package:dxvalue/src/extionBaseType.dart';
+import 'package:dxvalue/src/simpleValue.dart';
+import 'package:dxvalue/src/dxValue.dart';
 
 class JsonParse{
   Uint8List _dataList;
