@@ -40,7 +40,188 @@ enum msgPackFormatCode{
   msgPackFormatArray32,  //0xdd
   msgPackFormatMap16,    //0xde
   msgPackFormatMap32,    //0xdf
-  msgPackFormatNegFixInt  //0xe0-0xff  小负数
+  msgPackFormatNegFixInt //0xe0-0xff  小负数
 }
 
+class FormatCodeValue{
+  msgPackFormatCode code;
+  int value;
+  FormatCodeValue(this.code,this.value);
+  FormatCodeValue.from(int formatCode) {
+    reset(formatCode);
+  }
 
+  bool isMap(){
+    return code == msgPackFormatCode.msgPackFormatFixMap || code == msgPackFormatCode.msgPackFormatMap16 || code == msgPackFormatCode.msgPackFormatMap32;
+  }
+
+  bool isArray(){
+    return code == msgPackFormatCode.msgPackFormatFixArray || code == msgPackFormatCode.msgPackFormatArray16 || code == msgPackFormatCode.msgPackFormatArray32;
+  }
+
+  bool isString(){
+    return code == msgPackFormatCode.msgPackFormatFixStr || code == msgPackFormatCode.msgPackFormatStr16 || code == msgPackFormatCode.msgPackFormatStr32;
+  }
+
+  void reset(int formatCode){
+    switch(formatCode){
+      case 0xc0:
+        code = msgPackFormatCode.msgPackFormatNil;
+        value = null;
+        return;
+      case 0xc1:
+        code = msgPackFormatCode.msgPackFormatUnUsed;
+        value = null;
+        return;
+      case 0xc2:
+        code = msgPackFormatCode.msgPackFormatFalse;
+        value = null;
+        return;
+      case 0xc3:
+        code = msgPackFormatCode.msgPackFormatTrue;
+        value = null;
+        return;
+      case 0xc4:
+        code = msgPackFormatCode.msgPackFormatBin8;
+        value = null;
+        return;
+      case 0xc5: 
+        code = msgPackFormatCode.msgPackFormatBin16;
+        value = null;
+        return;
+      case 0xc6: 
+        code = msgPackFormatCode.msgPackFormatBin32;
+        value = null;
+        return;
+      case 0xc7: 
+        code = msgPackFormatCode.msgPackFormatExt8;
+        value = null;
+        return;
+      case 0xc8: 
+        code = msgPackFormatCode.msgPackFormatExt16;
+        value = null;
+        return;
+      case 0xc9:
+        code = msgPackFormatCode.msgPackFormatExt32;
+        value = null;
+        return;
+      case 0xca:
+        code = msgPackFormatCode.msgPackFormatFloat;
+        value = null;
+        return;
+      case 0xcb:
+        code = msgPackFormatCode.msgPackFormatDouble;
+        value = null;
+        return;
+      case 0xcc:
+        code = msgPackFormatCode.msgPackFormatUInt8;
+        value = null;
+        return;
+      case 0xcd:
+        code = msgPackFormatCode.msgPackFormatUInt16;
+        value = null;
+        return;
+      case 0xce:
+        code = msgPackFormatCode.msgPackFormatUInt32;
+        value = null;
+        return;
+      case 0xcf:
+        code = msgPackFormatCode.msgPackFormatUInt64;
+        value = null;
+        return;
+      case 0xd0:
+        code = msgPackFormatCode.msgPackFormatInt8;
+        value = null;
+        return;
+      case 0xd1:
+        code = msgPackFormatCode.msgPackFormatInt16;
+        value = null;
+        return;
+      case 0xd2:
+        code = msgPackFormatCode.msgPackFormatInt32;
+        value = null;
+        return;
+      case 0xd3:
+        code = msgPackFormatCode.msgPackFormatInt64;
+        value = null;
+        return;
+      case 0xd4:
+        code = msgPackFormatCode.msgPackFormatFixExt1;
+        value = null;
+        return;
+      case 0xd5:
+        code = msgPackFormatCode.msgPackFormatFixExt2;
+        value = null;
+        return;
+      case 0xd6:
+        code = msgPackFormatCode.msgPackFormatFixExt4;
+        value = null;
+        return;
+      case 0xd7:
+        code = msgPackFormatCode.msgPackFormatFixExt8;
+        value = null;
+        return;
+      case 0xd8:
+        code = msgPackFormatCode.msgPackFormatFixExt16;
+        value = null;
+        return;
+      case 0xd9:
+        code = msgPackFormatCode.msgPackFormatStr8;
+        value = null;
+        return;
+      case 0xda:
+        code = msgPackFormatCode.msgPackFormatStr16;
+        value = null;
+        return;
+      case 0xdb:
+        code = msgPackFormatCode.msgPackFormatStr32;
+        value = null;
+        return;
+      case 0xdc:
+        code = msgPackFormatCode.msgPackFormatArray16;
+        value = null;
+        return;
+      case 0xdd:
+        code = msgPackFormatCode.msgPackFormatArray32;
+        value = null;
+        return;
+      case 0xde:
+        code = msgPackFormatCode.msgPackFormatMap16;
+        value = null;
+        return;
+      case 0xdf:
+        code = msgPackFormatCode.msgPackFormatMap32;
+        value = null;
+        return;
+      default:
+        if(formatCode >= 0x00 && formatCode <= 0x7f){
+          code = msgPackFormatCode.msgPackFormatFixInt;
+          value = formatCode;
+          return;
+        }
+        if(formatCode >= 0x80 && formatCode <=0x8f){
+          code = msgPackFormatCode.msgPackFormatFixMap;
+          value = formatCode & 0x0f;
+          return;
+        }
+        if(formatCode >= 0x90 && formatCode <= 0x9f){
+          code = msgPackFormatCode.msgPackFormatFixArray;
+          value = formatCode & 0x0f;
+          return;
+        }
+
+        if(formatCode >= 0xa0 && formatCode <= 0xbf){
+          code = msgPackFormatCode.msgPackFormatFixStr;
+          value = formatCode & 0x1f;
+          return;
+        }
+        if(formatCode >= 0xe0 && formatCode <= 0xff){
+          code = msgPackFormatCode.msgPackFormatNegFixInt;
+          value = formatCode - 256;
+          return;
+        }
+    }
+    code = msgPackFormatCode.msgPackFormatUnUsed;
+    value = null;
+  }
+}

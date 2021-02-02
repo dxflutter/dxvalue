@@ -9,6 +9,7 @@ enum valueType{
   //简单元素的类型
   VT_Int,
   VT_Double,
+  VT_Float,
   VT_DateTime,
   VT_Boolean,
   VT_String,
@@ -224,18 +225,30 @@ class IntValue  extends BaseValue{
   @override
   // TODO: implement hashCode
   int get hashCode => super.hashCode;
-
 }
 
 class DoubleValue extends BaseValue{
   double value;
-  DoubleValue({this.value});
+  bool float32;
+  DoubleValue({this.value}){
+    float32 = false;
+  }
+
+  DoubleValue.fromFloat({this.value}){
+    float32 = true;
+  }
 
   @override
-  get type => valueType.VT_Double;
+  get type {
+    if(float32){
+      return valueType.VT_Float;
+    }
+    return valueType.VT_Double;
+  }
 
   DoubleValue.fromString(String vStr){
     value = double.tryParse(vStr);
+    float32 = false;
   }
 
   @override

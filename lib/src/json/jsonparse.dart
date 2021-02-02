@@ -27,13 +27,10 @@ class JsonParse{
   }
 
   bool isObject([bool skipCheck=true]){
-    int oldIndex = _offset;
     _skipWhiteSpace();
     bool result = _dataList[_offset] == 0x7B;
     if(skipCheck){
       _offset++;
-    }else{
-      _offset = oldIndex;
     }
     return result;
   }

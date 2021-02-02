@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:dxvalue/src/json/jsonparse.dart';
@@ -7,7 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:dxvalue/dxvalue.dart';
 
-void main() {
+void testJson(){
   String st = """
 {
   "Author": "辰东",
@@ -35,42 +36,56 @@ void main() {
   ]
 }  
   """;
-  test("test dxValue",(){
-    DxValue strValue = DxValue.fromJson(st);
-    print(strValue);
-    st = JsonEncoder.encode(strValue);
-    print("------strvalue Is------\r\n"+st);
-    DxValue newValue = DxValue.fromJson(st);
-    print("------newValue Is------\r\n"+newValue.toString());
+  DxValue strValue = DxValue.fromJson(st);
+  print(strValue);
+  st = JsonEncoder.encode(strValue);
+  print("------strvalue Is------\r\n"+st);
+  DxValue newValue = DxValue.fromJson(st);
+  print("------newValue Is------\r\n"+newValue.toString());
 
-    Uint8List u8list = JsonEncoder.toU8List(newValue,format: true,utf8: false);
-    print(String.fromCharCodes(u8list));
+  Uint8List u8list = JsonEncoder.toU8List(newValue,format: true,utf8: false);
+  print(String.fromCharCodes(u8list));
 
-    newValue.clear();
+  newValue.clear();
 
-    print("---JsonParse Unicode----");
-    newValue.resetFromJsonBytes(u8list);
-    print(newValue);
-
+  print("---JsonParse Unicode----");
+  newValue.resetFromJsonBytes(u8list);
+  print(newValue);
 
 
-    u8list = JsonEncoder.toU8List(newValue,format: true,utf8: true);
-    print("---utf8toString----");
-    print(u8list.utf8toString());
 
-    //parse.reset(u8list);
-    print("---JsonParse Utf8----");
-    newValue.clear();
-    newValue.resetFromJsonBytes(u8list);
-    print(newValue);
+  u8list = JsonEncoder.toU8List(newValue,format: true,utf8: true);
+  print("---utf8toString----");
+  print(u8list.utf8toString());
 
-    print(newValue.valueByKey("Author"));
-    print(newValue["Author"]);
-    //print(parse.parse());
+  //parse.reset(u8list);
+  print("---JsonParse Utf8----");
+  newValue.clear();
+  newValue.resetFromJsonBytes(u8list);
+  print(newValue);
 
-    DxValue tempValue = DxValue(false);
-    DxValue record = tempValue.forcePath(["路径1","路径2","路径3"],false);
-    record.setKeyString("路径4", "测试数据");
-    print(tempValue);
+  print(newValue.valueByKey("Author"));
+  print(newValue["Author"]);
+  //print(parse.parse());
+
+  DxValue tempValue = DxValue(false);
+  DxValue record = tempValue.forcePath(["路径1","路径2","路径3"],false);
+  record.setKeyString("路径4", "测试数据");
+  print(tempValue);
+}
+
+void testMsgPack(){
+  File file = File("d:/1.bin");
+  Uint8List u8List = file.readAsBytesSync();
+  DxValue dxValue = DxValue.fromMsgPack(u8List);
+  print(dxValue);
+}
+
+void main() {
+  test("json dxValue",(){
+    testJson();
+  });
+  test("msgPack dxValue",(){
+    testMsgPack();
   });
 }

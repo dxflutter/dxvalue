@@ -17,6 +17,9 @@
 
 import 'dart:typed_data';
 
+import 'package:dxvalue/src/msgpack/coder.dart';
+import 'package:dxvalue/src/msgpack/typeSystem.dart';
+
 import 'json/jsonparse.dart';
 import 'simpleValue.dart';
 
@@ -161,24 +164,48 @@ class DxValue extends BaseValue{
 
   DxValue.fromJson(String jsonStr){
     _values = List<BaseValue>();
-    JsonParse parse = JsonParse.fromString(jsonStr);
-    _isArray = !parse.isObject();
-    if (!_isArray){
-      _keys = List<String>();
+    _isArray = true;
+    resetFromJson(jsonStr);
+  }
+
+  DxValue.fromMsgPack(Uint8List msgPackData){
+    _values = List<BaseValue>();
+    _isArray = true;
+    resetFromMsgPack(msgPackData);
+  }
+
+  void resetFromMsgPack(Uint8List msgPackData){
+    MsgPackParser parse = MsgPackParser(msgPackData);
+    FormatCodeValue fmtCode = parse.checkCode(true);
+    if(fmtCode.isMap()){
+      if(_keys == null){
+        _keys = List<String>();
+      }else{
+        _keys.clear();
+      }
+      parse.parseObject(this);
+    }else if(fmtCode.isArray()){
+      _isArray = true;
+      _keys = null;
+      parse.parseArray(this);
     }
-    parse.parseObject(this);
   }
 
   void resetFromJson(String jsonStr){
     clear();
     JsonParse parse = JsonParse.fromString(jsonStr);
     _isArray = !parse.isObject();
-    if (!_isArray && _keys == null){
-      _keys = List<String>();
-    }else if (_isArray){
+    if (!_isArray){
+      if(_keys == null){
+        _keys = List<String>();
+      }else{
+        _keys.clear();
+      }
+      parse.parseObject(this);
+    }else{
       _keys = null;
+      parse.parseArray(this);
     }
-    parse.parseObject(this);
   }
 
   void resetFromJsonBytes(Uint8List u8List){
@@ -404,10 +431,26 @@ class DxValue extends BaseValue{
     }
     int idx = _newKeyIndex(key);
     if(_values[idx] != null && _values[idx] is DoubleValue){
-      (_values[idx] as DoubleValue).value = value;
+      DoubleValue v = (_values[idx] as DoubleValue);
+      v.value = value;
+      v.float32 = false;
       return;
     }
     _values[idx] = DoubleValue(value: value);
+  }
+
+  void setKeyFloat(String key,double value){
+    if(_isArray){
+      return ;
+    }
+    int idx = _newKeyIndex(key);
+    if(_values[idx] != null && _values[idx] is DoubleValue){
+      DoubleValue v = (_values[idx] as DoubleValue);
+      v.value = value;
+      v.float32 = true;
+      return;
+    }
+    _values[idx] = DoubleValue.fromFloat(value: value);
   }
 
   void setIndexDouble(int index,double value){
@@ -420,10 +463,29 @@ class DxValue extends BaseValue{
       return ;
     }
     if(_values[index] != null && _values[index] is IntValue){
-      (_values[index] as DoubleValue).value = value;
+      DoubleValue v = (_values[index] as DoubleValue);
+      v.value = value;
+      v.float32 = false;
       return;
     }
     _values[index] = DoubleValue(value: value);
+  }
+
+  void setIndexFloat(int index,double value){
+    if(!_isArray){
+      return ;
+    }
+    if(index < 0 || index > _values.length - 1){
+      _values.add(DoubleValue.fromFloat(value: value));
+      return ;
+    }
+    if(_values[index] != null && _values[index] is IntValue){
+      DoubleValue v = (_values[index] as DoubleValue);
+      v.value = value;
+      v.float32 = true;
+      return;
+    }
+    _values[index] = DoubleValue.fromFloat(value: value);
   }
 
   void setKeyBool(String key,bool value){
@@ -572,7 +634,7 @@ class DxValue extends BaseValue{
 
   void setIndexValue(int index,Object value){
     if(value == null){
-      if(_isArray){
+      if(!_isArray){
         return ;
       }
       if(index < 0 || index > _values.length - 1){
