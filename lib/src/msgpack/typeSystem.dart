@@ -18,8 +18,10 @@ enum msgPackFormatCode{
   msgPackFormatExt8,     //0xc7
   msgPackFormatExt16,    //0xc8
   msgPackFormatExt32,    //0xc9
+
   msgPackFormatFloat,    //0xca
   msgPackFormatDouble,   //0xcb
+
   msgPackFormatUInt8,    //0xcc
   msgPackFormatUInt16,   //0xcd
   msgPackFormatUInt32,   //0xce
@@ -28,6 +30,7 @@ enum msgPackFormatCode{
   msgPackFormatInt16,    //0xd1
   msgPackFormatInt32,    //0xd2
   msgPackFormatInt64,    //0xd3
+
   msgPackFormatFixExt1,  //0xd4
   msgPackFormatFixExt2,  //0xd5
   msgPackFormatFixExt4,  //0xd6
@@ -61,6 +64,14 @@ class FormatCodeValue{
 
   bool isString(){
     return code == msgPackFormatCode.msgPackFormatFixStr || code == msgPackFormatCode.msgPackFormatStr16 || code == msgPackFormatCode.msgPackFormatStr32;
+  }
+
+  bool isFixInt(){
+    return code == msgPackFormatCode.msgPackFormatFixInt || code == msgPackFormatCode.msgPackFormatNegFixInt;
+  }
+
+  bool isInt(){
+    return  isFixInt() || code.index >= msgPackFormatCode.msgPackFormatUInt8.index && code.index <= msgPackFormatCode.msgPackFormatInt64.index;
   }
 
   void reset(int formatCode){

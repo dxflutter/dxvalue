@@ -183,6 +183,7 @@ class DxValue extends BaseValue{
       }else{
         _keys.clear();
       }
+      _isArray = false;
       parse.parseObject(this);
     }else if(fmtCode.isArray()){
       _isArray = true;
@@ -630,6 +631,36 @@ class DxValue extends BaseValue{
       setKeyDxValue(key,value);
       return ;
     }
+  }
+
+  void setIndexObject(int index,DxValue objValue){
+    if(!_isArray || objValue._isArray){
+      return ;
+    }
+
+    if(index < 0 || index > _values.length - 1){
+      _values.add(objValue);
+      return ;
+    }
+    if(_values[index] != null && _values[index] is DxValue){
+      (_values[index] as DxValue).clear();
+    }
+    _values[index] = objValue;
+  }
+
+  void setIndexArray(int index,DxValue objValue){
+    if(!_isArray || !objValue._isArray){
+      return ;
+    }
+
+    if(index < 0 || index > _values.length - 1){
+      _values.add(objValue);
+      return ;
+    }
+    if(_values[index] != null && _values[index] is DxValue){
+      (_values[index] as DxValue).clear();
+    }
+    _values[index] = objValue;
   }
 
   void setIndexValue(int index,Object value){

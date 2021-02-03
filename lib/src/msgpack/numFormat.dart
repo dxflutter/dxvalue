@@ -41,4 +41,37 @@ extension intFormat on MsgPackParser {
     _offset += 8;
     return result;
   }
+
+  int parseInt(){
+    switch(formatCode.code){
+      case msgPackFormatCode.msgPackFormatFixInt:
+      case msgPackFormatCode.msgPackFormatNegFixInt:
+        return formatCode.value;
+      case msgPackFormatCode.msgPackFormatUInt8:
+        return parseU8();
+      case msgPackFormatCode.msgPackFormatUInt16:
+        return parseU16();
+      case msgPackFormatCode.msgPackFormatUInt32:
+        return parseU32();
+      case msgPackFormatCode.msgPackFormatUInt64:
+        return parseU64();
+      case msgPackFormatCode.msgPackFormatInt8:
+        int result = _byteData.getInt8(_offset);
+        _offset++;
+        return result;
+      case msgPackFormatCode.msgPackFormatInt16:
+        int result = _byteData.getInt16(_offset);
+        _offset += 2;
+        return result;
+      case msgPackFormatCode.msgPackFormatInt32:
+        int result = _byteData.getInt32(_offset);
+        _offset += 4;
+        return result;
+      case msgPackFormatCode.msgPackFormatInt64:
+        int result = _byteData.getInt64(_offset);
+        _offset += 8;
+        return result;
+    }
+    return 0;
+  }
 }
