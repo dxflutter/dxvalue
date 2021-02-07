@@ -74,6 +74,18 @@ class FormatCodeValue{
     return  isFixInt() || code.index >= msgPackFormatCode.msgPackFormatUInt8.index && code.index <= msgPackFormatCode.msgPackFormatInt64.index;
   }
 
+  bool isBin(){
+    return code.index >= msgPackFormatCode.msgPackFormatBin8.index && code.index <= msgPackFormatCode.msgPackFormatBin32.index;
+  }
+
+  bool isExt(){
+    return code.index >= msgPackFormatCode.msgPackFormatExt8.index && code.index <= msgPackFormatCode.msgPackFormatExt32.index;
+  }
+
+  bool isFixExt(){
+    return code.index >= msgPackFormatCode.msgPackFormatFixExt1.index && code.index <= msgPackFormatCode.msgPackFormatFixExt16.index;
+  }
+
   void reset(int formatCode){
     switch(formatCode){
       case 0xc0:

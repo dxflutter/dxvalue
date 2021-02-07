@@ -3,12 +3,8 @@
 // date: 2021-02-02
 // MsgPack的解码
 
-
-import 'dart:ffi';
 import 'dart:typed_data';
-
 import 'package:dxvalue/dxvalue.dart';
-
 import 'typeSystem.dart';
 part 'numFormat.dart';
 
@@ -56,7 +52,168 @@ class MsgPackParser {
     return "";
   }
 
-  void _parseValue(DxValue parent,[String key]){
+  void _parseTimeStamp(DxValue parent,[String key]){
+    switch(formatCode.code){
+      case msgPackFormatCode.msgPackFormatFixExt4:
+        //4字节时间信息
+        int sec = _byteData.getUint32(_offset);
+        if(key != null){
+          parent.setKeyDateTime(key, DateTime.fromMillisecondsSinceEpoch(sec * 1000));
+        }else{
+          parent.setIndexDateTime(-1, DateTime.fromMillisecondsSinceEpoch(sec * 1000));
+        }
+        _offset += 4;
+        break;
+      case msgPackFormatCode.msgPackFormatFixExt8:
+        //8字节时间信息
+        //64位时间格式
+        int sec = _byteData.getUint64(_offset);
+        int nsec = sec >> 34; //纳秒
+        sec &= 0x00000003ffffffff; //秒
+        DateTime dt = DateTime.fromMillisecondsSinceEpoch(sec * 1000);
+        if(key != null){
+          parent.setKeyDateTime(key, dt.add(Duration(microseconds: nsec ~/ 1000)));
+        }else{
+          parent.setIndexDateTime(-1, dt.add(Duration(microseconds: nsec ~/ 1000)));
+        }
+        _offset += 8;
+        break;
+      case msgPackFormatCode.msgPackFormatExt8:
+        //12字节时间信息
+        int nsec = _byteData.getUint32(_offset);
+        _offset += 4;
+        int sec = _byteData.getUint64(_offset);
+        DateTime dt = DateTime.fromMillisecondsSinceEpoch(sec * 1000);
+        if(key != null){
+          parent.setKeyDateTime(key, dt.add(Duration(microseconds: nsec ~/ 1000)));
+        }else{
+          parent.setIndexDateTime(-1, dt.add(Duration(microseconds: nsec ~/ 1000)));
+        }
+        _offset += 8;
+        break;
+    }
+  }
+
+  void _parseExt(DxValue parent,{String key,bool shareBinary=true}){
+    //先读取长度
+    int extLen = 0;
+    switch(formatCode.code){
+      case msgPackFormatCode.msgPackFormatExt8:
+        extLen = _byteData.getUint8(_offset);
+        _offset++;
+        break;
+      case msgPackFormatCode.msgPackFormatExt16:
+        extLen = _byteData.getUint16(_offset);
+        _offset += 2;
+        break;
+      case msgPackFormatCode.msgPackFormatExt32:
+        extLen = _byteData.getUint32(_offset);
+        _offset += 4;
+        break;
+    }
+    //读取extCode
+    int type =  _byteData.getInt8(_offset);
+    _offset++;
+    if(extLen == 0){
+      return;
+    }
+    if(type == -1 && formatCode.code == msgPackFormatCode.msgPackFormatExt8){
+      //96位日期时间
+      _parseTimeStamp(parent,key);
+      return;
+    }
+    int start = _offset;
+    _offset += extLen;
+    ExtValue extValue;
+    if(shareBinary){
+      extValue = ExtValue(type, _dataList.sublist(start,_offset));
+    }else{
+      extValue = ExtValue(type, Uint8List.fromList(_dataList.sublist(start,_offset)));
+    }
+    if(key == null){
+      parent.setIndexValue(-1, extValue);
+    }else{
+      parent.setKeyValue(key, extValue);
+    }
+  }
+
+  void _parseFixExt(DxValue parent,{String key,bool shareBinary=true}){
+    //读取extCode
+    int type =  _byteData.getInt8(_offset);
+    _offset++;
+    if(type == -1 && (formatCode.code == msgPackFormatCode.msgPackFormatFixExt4 || formatCode.code == msgPackFormatCode.msgPackFormatFixExt8)){
+      //日期时间
+      _parseTimeStamp(parent,key);
+      return;
+    }
+    Uint8List data;
+    int start = _offset;
+    ExtValue extValue;
+    switch(formatCode.code){
+      case msgPackFormatCode.msgPackFormatFixExt1:
+        _offset++;
+        break;
+      case msgPackFormatCode.msgPackFormatFixExt2:
+        _offset += 2;
+        break;
+      case msgPackFormatCode.msgPackFormatFixExt4:
+        _offset += 4;
+        break;
+      case msgPackFormatCode.msgPackFormatFixExt8:
+        _offset += 8;
+        break;
+      case msgPackFormatCode.msgPackFormatFixExt16:
+        _offset += 16;
+        break;
+    }
+    if(shareBinary){
+      extValue = ExtValue(type, _dataList.sublist(start,_offset));
+    }else{
+      extValue = ExtValue(type, Uint8List.fromList(_dataList.sublist(start,_offset)));
+    }
+    if(key == null){
+      parent.setIndexValue(-1, extValue);
+    }else{
+      parent.setKeyValue(key, extValue);
+    }
+  }
+
+  void _parseBin(DxValue parent,{String key,bool shareBinary=true}){
+    int binLen = 0;
+    switch(formatCode.code){
+      case msgPackFormatCode.msgPackFormatBin8:
+        binLen = _byteData.getUint8(_offset);
+        _offset ++;
+        break;
+      case msgPackFormatCode.msgPackFormatBin16:
+        binLen = _byteData.getUint16(_offset);
+        _offset += 2;
+        break;
+      case msgPackFormatCode.msgPackFormatBin32:
+        binLen = _byteData.getUint32(_offset);
+        _offset += 4;
+        break;
+    }
+    if(binLen == 0){
+      return;
+    }
+    int start = _offset;
+    _offset += binLen;
+    BinaryValue binaryValue = BinaryValue();
+
+    if(shareBinary){
+      binaryValue.binary = _dataList.sublist(start,_offset);
+    }else{
+      binaryValue.binary = Uint8List.fromList(_dataList.sublist(start,_offset));
+    }
+    if(key == null){
+      parent.setIndexValue(-1, binaryValue);
+    }else{
+      parent.setKeyValue(key, binaryValue);
+    }
+  }
+
+  void _parseValue(DxValue parent,{String key,bool shareBinary=true}){
     //先获取Code
     formatCode.reset(_dataList[_offset]);
     _offset++;
@@ -108,6 +265,19 @@ class MsgPackParser {
       }
       return ;
     }
+    if(formatCode.isBin()){
+      _parseBin(parent,key:key,shareBinary: shareBinary);
+      return;
+    }
+    if(formatCode.isExt()){
+      //读取extCode
+      _parseExt(parent,key:key,shareBinary: shareBinary);
+      return;
+    }
+    if(formatCode.isFixExt()){
+      _parseFixExt(parent,key:key,shareBinary: shareBinary);
+      return;
+    }
     if(formatCode.isMap()){
       DxValue arrayValue;
       if(key != null){
@@ -115,7 +285,7 @@ class MsgPackParser {
       }else{
         arrayValue = parent.newObject();
       }
-      parseObject(arrayValue);
+      parseObject(arrayValue,shareBinary);
       return;
     }
     if(formatCode.isArray()){
@@ -140,7 +310,7 @@ class MsgPackParser {
   }
 
 
-  void parseArray(DxValue arrayValue){
+  void parseArray(DxValue arrayValue,[bool shareBinary=true]){
     arrayValue.clear();
     int arrLen = formatCode.value;
     switch(formatCode.code){
@@ -154,11 +324,11 @@ class MsgPackParser {
         break;
     }
     for(var i = 0;i<arrLen;i++){
-      _parseValue(arrayValue);
+      _parseValue(arrayValue,shareBinary: shareBinary);
     }
   }
 
-  void parseObject(DxValue objValue){
+  void parseObject(DxValue objValue,[bool shareBinary=true]){
     objValue.clear();
     int objLen = formatCode.value;
     switch(formatCode.code){
@@ -178,14 +348,14 @@ class MsgPackParser {
         formatCode.reset(_dataList[_offset]);
         _offset++;
         String key = _readString();
-        _parseValue(objValue,key);
+        _parseValue(objValue,key:key,shareBinary: shareBinary);
       }
     }else{
       for(var i = 0;i<objLen;i++){
         formatCode.reset(_dataList[_offset]);
         _offset++;
         String key = parseInt().toString();
-        _parseValue(objValue,key);
+        _parseValue(objValue,key:key,shareBinary: shareBinary);
       }
     }
   }

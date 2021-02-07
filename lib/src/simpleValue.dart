@@ -4,6 +4,7 @@
 // 万能值对象基类BaseValue
 
 import 'dart:typed_data';
+import 'extionBaseType.dart';
 
 enum valueType{
   //简单元素的类型
@@ -53,7 +54,7 @@ abstract class BaseValue extends Iterable<KeyValue>{
       case valueType.VT_Boolean:
         return ((this as BoolValue).value??false)?1:0;
       case valueType.VT_DateTime:
-        return DateTimeValue.toDelphiTime((this as DateTimeValue).value??DateTime(0)).toInt();
+        return (this as DateTimeValue).value??DateTime(0).toDelphiTime().toInt();
       case valueType.VT_Null:
         return 0;
       case valueType.VT_String:
@@ -74,7 +75,7 @@ abstract class BaseValue extends Iterable<KeyValue>{
       case valueType.VT_Boolean:
         return ((this as BoolValue).value??false)?1:0;
       case valueType.VT_DateTime:
-        return DateTimeValue.toDelphiTime((this as DateTimeValue).value??DateTime(0));
+        return (this as DateTimeValue).value??DateTime(0).toDelphiTime();
       case valueType.VT_Null:
         return 0;
       case valueType.VT_String:
@@ -109,7 +110,7 @@ abstract class BaseValue extends Iterable<KeyValue>{
       case valueType.VT_Boolean:
         return (this as BoolValue).value??false;
       case valueType.VT_DateTime:
-        return DateTimeValue.toDelphiTime((this as DateTimeValue).value??DateTime(0)) > 0;
+        return (this as DateTimeValue).value??DateTime(0).toDelphiTime() > 0;
       case valueType.VT_Null:
         return false;
       case valueType.VT_String:
@@ -301,46 +302,10 @@ class DoubleValue extends BaseValue{
 
 class DateTimeValue extends BaseValue{
   DateTime value;
-  /*Delphi日期初始函数
-   Delphi的日期规则为到1899-12-30号的天数+当前的毫秒数/一天的总共毫秒数集合
-   */
-  static DateTime _delphiFirstTime= DateTime(1899,12,30); //Delphi的初始化时间
-  static DateTime _delphiUtcTime = DateTime.utc(1899,12,30);
-  //转换到DelphiTime
-  static double toDelphiTime(DateTime time){
-    if (time.year == 0 && time.day == 0 && time.month == 0){
-      return 0;
-    }
-    Duration duration;
-    DateTime date;
-    if (time.isUtc){
-      duration = time.difference(_delphiUtcTime);
-      date = DateTime.utc(time.year,time.month,time.day);
-    }else{
-      duration = time.difference(_delphiFirstTime);
-      date = DateTime(time.year,time.month,time.day);
-    }
-    int days = duration.inHours ~/ 24;
-    Duration timeSecs = time.difference(date);
-    return days.toDouble() + timeSecs.inMilliseconds / Duration.millisecondsPerDay;
-  }
-
-  static DateTime dateTimeFromDelphi(double delphiTime){
-    if (delphiTime == 0){
-      return DateTime(0);
-    }
-    int days = delphiTime.toInt();
-    double ms = delphiTime - days.toDouble();
-    ms = ms * Duration.millisecondsPerDay;
-    return _delphiFirstTime.add(Duration(days: days,milliseconds: ms.toInt()));
-  }
-
   DateTimeValue({this.value});
-
   DateTimeValue.fromDelphi(double delphiTime){
-    value = dateTimeFromDelphi(delphiTime);
+    value = delphiTime.toTime();
   }
-
   DateTimeValue.fromString(String vStr){
     DateTime v = DateTime.tryParse(vStr);
     if (v != null){
@@ -348,7 +313,7 @@ class DateTimeValue extends BaseValue{
     }
     double d = double.tryParse(vStr);
     if (d != null){
-      value = dateTimeFromDelphi(d);
+      value = d.toTime();
     }
   }
 
@@ -365,7 +330,10 @@ class DateTimeValue extends BaseValue{
       return other.value == value;
     }
     if (other is double){
-      return dateTimeFromDelphi(other) == value;
+      if(value == null && other == null){
+        return true;
+      }
+      return (value != null) && other == value.toDelphiTime();
     }
     return false;
   }
@@ -437,12 +405,4 @@ class StringValue extends BaseValue{
   @override
   // TODO: implement hashCode
   int get hashCode => super.hashCode;
-}
-
-class BinaryValue extends BaseValue{
-  Uint8List binary;
-  @override
-  get type => valueType.VT_Binary;
-
-
 }

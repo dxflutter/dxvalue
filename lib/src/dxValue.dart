@@ -22,6 +22,7 @@ import 'package:dxvalue/src/msgpack/typeSystem.dart';
 
 import 'json/jsonparse.dart';
 import 'simpleValue.dart';
+import 'extionBaseType.dart';
 
 class _DxValueIterator extends Iterator<KeyValue>{
   int _startIterator;
@@ -74,8 +75,7 @@ class DxValue extends BaseValue{
     return idx;
   }
 
-  String _jsonString(int level){
-    StringBuffer stringBuffer = StringBuffer();
+  String _writeJsonString(int level,StringBuffer stringBuffer){
     if(_isArray){
       stringBuffer.write('[\r\n');
       if(_values != null){
@@ -91,13 +91,14 @@ class DxValue extends BaseValue{
             stringBuffer.write('"');
             stringBuffer.write(_values[i]);
             stringBuffer.write('"');
+          }else if (_values[i] != null && _values[i] is DxValue) {
+            (_values[i] as DxValue)._writeJsonString(level + 1, stringBuffer);
+          } else if (_values[i] != null && _values[i] is ExtValue) {
+            (_values[i] as ExtValue)._writeString(level + 1, stringBuffer);
+          } else if (_values[i] != null && _values[i] is BinaryValue){
+            (_values[i] as BinaryValue)._writeBinary(stringBuffer);
           }else{
-            if (_values[i] != null && _values[i] is DxValue){
-              stringBuffer.write((_values[i] as DxValue)._jsonString(level + 1));
-            }else{
-              stringBuffer.write(_values[i]);
-            }
-
+            stringBuffer.write(_values[i]);
           }
         }
       }
@@ -124,12 +125,14 @@ class DxValue extends BaseValue{
             stringBuffer.write('"');
             stringBuffer.write(_values[i]);
             stringBuffer.write('"');
+          }else if (_values[i] != null && _values[i] is DxValue) {
+            (_values[i] as DxValue)._writeJsonString(level + 1, stringBuffer);
+          } else if (_values[i] != null && _values[i] is ExtValue){
+            (_values[i] as ExtValue)._writeString(level + 1,stringBuffer);
+          } else if (_values[i] != null && _values[i] is BinaryValue){
+            (_values[i] as BinaryValue)._writeBinary(stringBuffer);
           }else{
-            if (_values[i] != null && _values[i] is DxValue){
-              stringBuffer.write((_values[i] as DxValue)._jsonString(level + 1));
-            }else{
-              stringBuffer.write(_values[i]);
-            }
+            stringBuffer.write(_values[i]);
           }
         }
       }
@@ -354,7 +357,9 @@ class DxValue extends BaseValue{
   //dart字符串采用UTF-16编码
   @override
   String toString(){
-    return _jsonString(0);
+    StringBuffer stringBuffer = StringBuffer();
+    _writeJsonString(0, stringBuffer);
+    return stringBuffer.toString();
     //return JsonEncoder.encode(this,format: true);
   }
 
@@ -878,3 +883,95 @@ class DxValue extends BaseValue{
   }
 }
 
+
+class ExtValue   extends BaseValue{
+  Uint8List binary;
+  int  extType;    // 0 - 127 application Custom Type,  -128- -1 系统预留类型 ,,-1为时间日期
+  @override
+  get type => valueType.VT_Binary;
+
+  msgPackFormatCode msgPackCode(){
+    int l = binary.length;
+    if(l == 1){
+      return msgPackFormatCode.msgPackFormatFixExt1;
+    }
+    if (l == 2){
+      return msgPackFormatCode.msgPackFormatFixExt2;
+    }
+    if (l == 4){
+      return msgPackFormatCode.msgPackFormatFixExt4;
+    }
+    if (l == 8){
+      return msgPackFormatCode.msgPackFormatFixExt8;
+    }
+    if (l == 16){
+      return msgPackFormatCode.msgPackFormatFixExt16;
+    }
+    if (l < 256){
+      return msgPackFormatCode.msgPackFormatExt8;
+    }
+    if (l < 2 << 16){
+      return msgPackFormatCode.msgPackFormatExt16;
+    }
+    if (l < 2 << 32){
+      return msgPackFormatCode.msgPackFormatExt32;
+    }
+    throw FormatException("不支持超过4G的扩展二进制信息");
+  }
+
+  ExtValue(this.extType,this.binary);
+
+  void _writeString(int spaceLevel,StringBuffer stringBuffer){
+    Uint8List space = Uint8List((spaceLevel + 1) << 1);
+    for(var i = 0;i < space.length;i++){
+      space[i] = 32;
+    }
+    String spaceStr = String.fromCharCodes(space);
+
+    stringBuffer.write('{\r\n');
+    stringBuffer.write(spaceStr);
+
+
+    stringBuffer.write('"extType":');
+    stringBuffer.write(extType);
+    stringBuffer.write(',\r\n');
+    stringBuffer.write(spaceStr);
+    stringBuffer.write('"data":"');
+    //转换成二进制
+    stringBuffer.write(binary.toHexWithFormat(spaceLevel: spaceLevel + 2));
+    stringBuffer.write('"\r\n');
+    if(spaceStr.length > 1){
+      stringBuffer.write(spaceStr.substring(spaceStr.length - 2));
+    }
+    stringBuffer.write('}');
+  }
+
+  @override
+  String toString(){
+    StringBuffer stringBuffer = StringBuffer();
+    _writeString(0, stringBuffer);
+    return stringBuffer.toString();
+  }
+}
+
+class BinaryValue extends BaseValue{
+  Uint8List binary;
+  @override
+  get type => valueType.VT_Binary;
+
+  void _writeBinary(StringBuffer stringBuffer){
+    if(binary == null){
+      stringBuffer.write("null");
+    }
+    stringBuffer.write('"Bin(');
+    binary.writeHex(stringBuffer);
+    stringBuffer.write(')"');
+  }
+
+  @override
+  String toString(){
+    StringBuffer stringBuffer = StringBuffer();
+    _writeBinary(stringBuffer);
+    return stringBuffer.toString();
+  }
+}
