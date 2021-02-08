@@ -85,10 +85,29 @@ void testJson(){
 }
 
 void testMsgPack(){
+
+  DxValue value = DxValue(false);
+  value["Name"] = "不得闲";
+  value["Age"] = 32;
+  print(value);
+
+
+
   File file = File("d:/1.bin");
-  Uint8List u8List = file.readAsBytesSync();
-  DxValue dxValue = DxValue.fromMsgPack(u8List);
-  print(dxValue);
+  DxValue dxValue;
+  if(file.existsSync()){
+    Uint8List u8List = file.readAsBytesSync();
+    dxValue = DxValue.fromMsgPack(u8List);
+    print(dxValue);
+
+    BaseValue value = dxValue.valueByKey("源天师");
+    if(value != null && value.type == valueType.VT_Binary){
+      File file = File("d:/源天师.txt");
+      file.writeAsBytes((value as BinaryValue).binary,mode: FileMode.write,flush: true);
+    }
+  }else{
+    dxValue = DxValue(false);
+  }
 
   dxValue.clear();
   dxValue.resetValueType(false);
@@ -104,19 +123,15 @@ void testMsgPack(){
   dxValue.setKeyDouble("Double",83.45234423424234);
   dxValue.setKeyDateTime("now", DateTime.now());
 
+
   String binary = """
   仙路尽头谁为峰，
   一见无始道成空。
   源天师，晚年不祥
 """;
   dxValue.setKeyBinary("源天师", binary.toUtf8());
-
-
   dxValue.setKeyExtBinary("源天师2", 3, binary.toUtf8());
-  
-
   Uint8List bytes = dxValue.encodeWithCoder(MsgPackParser());
-
   file.writeAsBytes(bytes,mode: FileMode.write,flush: true);
 }
 

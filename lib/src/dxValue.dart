@@ -244,6 +244,10 @@ class DxValue extends BaseValue{
     return JsonEncoder.toU8List(this,format: format,utf8: utf8);
   }
 
+  Uint8List encodeMsgPack(){
+    return MsgPackParser().encode(this);
+  }
+
   void resetFromJsonBytes(Uint8List u8List){
     JsonParse parse = JsonParse(u8List);
     _isArray = !parse.isObject();
@@ -384,6 +388,20 @@ class DxValue extends BaseValue{
       return valueByKey(index.value??"");
     }
     return null;
+  }
+
+  void operator []=(Object index, Object value){
+    if(index is int){
+      setIndexValue(index, value);
+    }else if (index is String){
+      setKeyValue(index, value);
+    }else if (index is BaseValue){
+      if(index is IntValue){
+        setIndexValue(index.value, value);
+      }else if (index is StringValue){
+        setKeyValue(index.value, value);
+      }
+    }
   }
 
   //dart字符串采用UTF-16编码

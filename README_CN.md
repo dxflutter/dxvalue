@@ -1,28 +1,27 @@
 # dxvalue
   
 **[English](./README.md "English")**  **[中文简体](./README_CN.md "简体中文")**  
-A super value library support json,msgpack,bson.
-## Getting Started
-### 1、Constructors
-- create an empty DxValue()
-- create DxValue from Json
-- create DxValue from MsgPack
+dart版本的超级值对象，支持Json,MsgPack，Bson
+## 开始
+### 1、构造函数
+- 创建一个空白的DxValue
+- 从Json创建一个DxValue
+- 从MsgPack创建一个DxValue   
 
-When creating a blank object, you need to specify a parameter to indicate whether you want to create an array type or an object type.
+创建空白对象的时候，需要指定一个参数，用来表示要创建数组类型，还是要创建对象类型。
+### 2、解码
+- 通过构造函数 **DxValue.fromJson** 构建Json
+- 通过构造函数 **DxValue.fromMsgPack** 构建MsgPack
+- 使用 **resetFromMsgPack** 针对已经构建好的对象解码MsgPack
+- 使用 **resetFromJson** 针对已经构建好的对象解析Json
+- 自己实现解码器，使用 **decodeWithCoder** 设定解码器进行解码
 
-### 2、Decode
-- use Constructors **DxValue.fromJson**  to decode  json
-- use Constructors **DxValue.fromMsgPack** to decode msgpack
-- use **resetFromMsgPack** method to decode msgpack
-- use **resetFromJson** method to decode json
-- use **decodeWithCoder** appoint custom decoder to decode custom Code
+### 3、编码
+- **encodeJson** 将DxValue编码到Json二进制
+- **encodeMsgPack** 将DxValue编码到MsgPack二进制
+- 自定义编码器，使用 **encodeWithCoder** 进行自定义编码
 
-### 3、encode
-- **encodeJson** 
-- **encodeMsgPack**
-- use **encodeWithCoder** appoint custom encoder to encode custom code
-
-### 4、useage
+### 4、使用
 ```dart
     DxValue dxValue = DxValue(false);
     dxValue.setKeyInt("fixInt1", 23);
@@ -46,11 +45,11 @@ When creating a blank object, you need to specify a parameter to indicate whethe
     dxValue.encodeMsgPack();
     dxValue.encodeJson();
 ```
-### 5、setValues
-You can use a series of functions such as set... to setValue. For object, you can use **setkey...** Related functions to set. For array, you can use **setIndex...** And other functions to set
-To build a new object, use **newobject**, **newarray** to build a sub object structure
+### 5、设置值
+设置可以使用set等一系列函数，进行设置，对于Object，可以使用setKey...相关的函数进行设定，对于数组，可以使用setIndex...等函数进行设定
+构建新的对象，使用 **newObject**,**newArray**来构建子对象结构  
 
-use **forceValue** or **forcePath**  can create an unexists path route 
+使用 **forceValue** 或者 **forcePath** 来强制构建一个不存在的路由路径
 ```dart
   DxValue dxvalue = DxValue(false);
   DxValue childHome = dxvalue.forceValue("root/home/childhome",arrayValue: false);
@@ -59,7 +58,7 @@ use **forceValue** or **forcePath**  can create an unexists path route
   homes.setIndexString(-1, "平米");
   print(dxvalue);
 ```
-This will print as follows:
+这将会打印内容如下：
 ```json
 {
   "root":{
@@ -75,13 +74,12 @@ This will print as follows:
 }
 ```
 
-### 6、getValues
-If you want to get the value inside dxvalue,you can use some functions like **...ByIndex** or **...ByKey** 
-such as **valueByIndex, intByKey, doubleByKey, dateTimeByKey** ...
-use **clear** method to clear dxvalue
+### 6、取值
+取值相关函数，主要是 **...ByIndex** 或者 **...ByKey** 等函数组成，比如说 **valueByIndex, intByKey, doubleByKey, dateTimeByKey** 等
+使用**clear**，清空对象
 
-### 7、Syntax sugar, operator overloading
-For dxvalue, the [] operator is overloaded. Therefore, for jsonobject, [string] can be used to retrieve data, and for array, [int] can be used to retrieve data, such as
+### 7、语法糖，操作符重载
+对于DxValue，重载了[]操作符，所以，对于JsonObject，可以使用 [string]进行检索，对于数组可以使用 [int]进行数据获取，比如
 ```dart
 DxValue value = DxValue(false);
 value.setKeyString("Name","不得闲");
@@ -93,11 +91,11 @@ childs.setIndexString(-1,"test");
 print(childs[0]);
 ```
 
-the operator []= is overloaded, you can directly use this syntax assignment, such as
+重载了[]=操作符，可以直接使用本语法赋值，比如
+
 ```dart
 DxValue value = DxValue(false);
 value["Name"] = "不得闲";
 value["Age"] = 32;
 print(value);
 ```
-
