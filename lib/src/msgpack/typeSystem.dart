@@ -63,7 +63,7 @@ class FormatCodeValue{
   }
 
   bool isString(){
-    return code == msgPackFormatCode.msgPackFormatFixStr || code == msgPackFormatCode.msgPackFormatStr16 || code == msgPackFormatCode.msgPackFormatStr32;
+    return code == msgPackFormatCode.msgPackFormatFixStr || code.index >= msgPackFormatCode.msgPackFormatStr8.index && code.index <= msgPackFormatCode.msgPackFormatStr32.index;
   }
 
   bool isFixInt(){

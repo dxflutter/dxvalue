@@ -502,14 +502,100 @@ class MsgPackParser implements BinCoder{
     }
   }
 
+  void _encodeDouble(BytesBuilder bytesBuilder,double value,bool isFloat){
+    ByteData byteData;
+    if(isFloat){
+      byteData = ByteData(4);
+      byteData.setFloat32(0, value);
+      bytesBuilder.addByte(0xca);
+    }else{
+      byteData = ByteData(8);
+      byteData.setFloat64(0, value);
+      bytesBuilder.addByte(0xcb);
+    }
+    bytesBuilder.add(byteData.buffer.asUint8List());
+  }
+
+  void _encodeTime(BytesBuilder bytesBuilder,DateTime value){
+     int secs = value.millisecondsSinceEpoch ~/ 1000;
+     ByteData byteData;
+     if (secs >> 34 == 0){
+       int data = (value.microsecond * 1000) << 34 | secs;
+       if(data & 0xffffffff00000000 == 0){
+         //32位日期格式
+         bytesBuilder.add([0xd6,0xff]);
+         byteData = ByteData(4);
+         byteData.setUint32(0, data);
+         bytesBuilder.add(byteData.buffer.asUint8List());
+         return;
+       }
+       //64位日期格式
+       bytesBuilder.add([0xd7,0xff]);
+       byteData = ByteData(8);
+       byteData.setUint64(0, data);
+       bytesBuilder.add(byteData.buffer.asUint8List());
+       return;
+     }
+     //96位日期格式
+     bytesBuilder.add([0xc7,12,0xff]);
+     byteData = ByteData(12);
+     byteData.setUint32(0, value.microsecond * 1000); //纳秒
+     byteData.setUint64(4, secs);
+     bytesBuilder.add(byteData.buffer.asUint8List());
+  }
+
+  void _encodeBinary(BytesBuilder bytesBuilder,BinaryValue value){
+    if(value.binary == null){
+      bytesBuilder.addByte(0xc0);
+      return;
+    }
+    int l = value.binary.length;
+    if(l < 256){
+      bytesBuilder.add([0xc4,l]);
+    }else if (l < 65536){
+      bytesBuilder.add([0xc5,l >> 8,l]);
+    }else {
+      bytesBuilder.add([0xc6,l >> 24,l >> 16,l >> 8,l]);
+    }
+    bytesBuilder.add(value.binary);
+  }
+
+  void _encodeExt(BytesBuilder bytesBuilder,ExtValue value){
+    int l = value.binary?.length??0;
+    if(l == 1){
+      bytesBuilder.add([0xd4,value.extType]);
+    }else if (l == 2){
+      bytesBuilder.add([0xd5,value.extType]);
+    }else if (l == 4){
+      bytesBuilder.add([0xd6,value.extType]);
+    }else if (l == 8){
+      bytesBuilder.add([0xd7,value.extType]);
+    }else if (l == 16){
+      bytesBuilder.add([0xd8,value.extType]);
+    }else if (l < 256){
+      bytesBuilder.add([0xc7,l,value.extType]);
+    }else if (l < 65536){
+      bytesBuilder.add([0xc8,l >> 8,l,value.extType]);
+    }else{
+      bytesBuilder.add([0xc8,l >> 24,l >> 16, l >> 8,l,value.extType]);
+    }
+    bytesBuilder.add(value.binary);
+  }
+
   void _encodeValue(BytesBuilder bytesBuilder,BaseValue value){
     switch(value.type){
       case valueType.VT_Int:
         _encodeInt(bytesBuilder, (value as IntValue).value);
         return;
       case valueType.VT_Float:
+        _encodeDouble(bytesBuilder,(value as DoubleValue).value,true);
+        return;
       case valueType.VT_Double:
+        _encodeDouble(bytesBuilder,(value as DoubleValue).value,false);
+        return;
       case valueType.VT_DateTime:
+        _encodeTime(bytesBuilder,(value as DateTimeValue).value);
+        return;
       case valueType.VT_Boolean:
         if ((value as BoolValue).value??false){
           bytesBuilder.addByte(0xc3);
@@ -524,6 +610,12 @@ class MsgPackParser implements BinCoder{
         bytesBuilder.addByte(0xc0);
         return;
       case valueType.VT_Binary:
+        if(value is BinaryValue){
+          _encodeBinary(bytesBuilder, value);
+        }else if (value is ExtValue){
+          _encodeExt(bytesBuilder,value);
+        }
+        return;
       case valueType.VT_Object:
         _encodeMap(bytesBuilder,(value as DxValue));
         return;

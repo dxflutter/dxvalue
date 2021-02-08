@@ -566,6 +566,39 @@ class DxValue extends BaseValue{
     _values[idx] = DateTimeValue(value: value);
   }
 
+  void setKeyExtBinary(String key,int extType,Uint8List binary,[bool copyBinary=false]){
+    if(_isArray || extType > 127 || extType < - 128){
+      return;
+    }
+    int idx = _newKeyIndex(key);
+    if(copyBinary){
+      binary = Uint8List.fromList(binary);
+    }
+    if(_values[idx] != null && _values[idx] is ExtValue){
+      ExtValue extValue = (_values[idx] as ExtValue);
+      extValue.extType = extType;
+      extValue.binary = binary;
+      return;
+    }
+    _values[idx] = ExtValue(extType, binary);
+  }
+
+  void setKeyBinary(String key,Uint8List binary,[bool copyBinary=false]){
+    if(_isArray){
+      return;
+    }
+    int idx = _newKeyIndex(key);
+    if(copyBinary){
+      binary = Uint8List.fromList(binary);
+    }
+    if(_values[idx] != null && _values[idx] is BinaryValue){
+      BinaryValue binaryValue = (_values[idx] as BinaryValue);
+      binaryValue.binary = binary;
+      return;
+    }
+    _values[idx] = BinaryValue(binary);
+  }
+
   void setIndexDateTime(int index,DateTime value){
     if(!_isArray){
       return ;
@@ -580,6 +613,45 @@ class DxValue extends BaseValue{
       return;
     }
     _values[index] = DateTimeValue(value: value);
+  }
+
+  void setIndexExtBinary(int index,int extType,Uint8List binary,[bool copyBinary=false]){
+    if(!_isArray || extType > 127 || extType < - 128){
+      return;
+    }
+    if(copyBinary){
+      binary = Uint8List.fromList(binary);
+    }
+    if(index < 0 || index > _values.length - 1){
+      _values[index] = ExtValue(extType, binary);
+      return;
+    }
+    if(_values[index] != null && _values[index] is ExtValue){
+      ExtValue extValue = (_values[index] as ExtValue);
+      extValue.extType = extType;
+      extValue.binary = binary;
+      return;
+    }
+    _values[index] = ExtValue(extType, binary);
+  }
+
+  void setIndexBinary(int index,Uint8List binary,[bool copyBinary=false]){
+    if(!_isArray){
+      return;
+    }
+    if(copyBinary){
+      binary = Uint8List.fromList(binary);
+    }
+    if(index < 0 || index > _values.length - 1){
+      _values[index] = BinaryValue(binary);
+      return;
+    }
+    if(_values[index] != null && _values[index] is BinaryValue){
+      BinaryValue binaryValue = (_values[index] as BinaryValue);
+      binaryValue.binary = binary;
+      return;
+    }
+    _values[index] = BinaryValue(binary);
   }
 
   void _innerSetIndexValue(int idx,BaseValue value){
@@ -990,6 +1062,8 @@ class BinaryValue extends BaseValue{
   Uint8List binary;
   @override
   get type => valueType.VT_Binary;
+
+  BinaryValue([this.binary]);
 
   void _writeBinary(StringBuffer stringBuffer){
     if(binary == null){
