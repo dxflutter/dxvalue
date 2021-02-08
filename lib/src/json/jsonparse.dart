@@ -9,8 +9,10 @@ import 'dart:typed_data';
 import 'package:dxvalue/src/extionBaseType.dart';
 import 'package:dxvalue/src/simpleValue.dart';
 import 'package:dxvalue/src/dxValue.dart';
+import 'package:flutter/cupertino.dart';
 
-class JsonParse{
+
+class JsonParse implements BinCoder{
   Uint8List _dataList;
   int _offset=0;
   JsonParse(this._dataList);
@@ -421,7 +423,26 @@ class JsonParse{
     }
     throw FormatException("无效的Json格式$_offset,未发现分隔符,");
   }
+
+  @override
+  Uint8List encode(DxValue value) {
+    return JsonEncoder.toU8List(value);
+  }
+
+  @override
+  void decodeToValue(Uint8List data, DxValue destValue) {
+    reset(data);
+    bool _isArray = !isObject();
+    destValue.resetValueType(_isArray);
+    if (!_isArray){
+      parseObject(destValue);
+    }else{
+      parseArray(destValue);
+    }
+  }
+
 }
+
 
 class JsonEncoder{
   static void _encodeUnicode(StringBuffer stringBuffer,String value){

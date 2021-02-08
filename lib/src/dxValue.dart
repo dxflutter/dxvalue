@@ -55,6 +55,13 @@ class _DxValueIterator extends Iterator<KeyValue>{
 
 }
 
+
+abstract class BinCoder{
+  Uint8List encode(DxValue value);
+  void decodeToValue(Uint8List data,DxValue destValue);
+}
+
+
 class DxValue extends BaseValue{
   bool _isArray;
   List<BaseValue> _values;
@@ -195,6 +202,19 @@ class DxValue extends BaseValue{
     }
   }
 
+  void resetValueType(bool array){
+    _isArray = array;
+    if (!_isArray){
+      if(_keys == null){
+        _keys = List<String>();
+      }else{
+        _keys.clear();
+      }
+    }else{
+      _keys = null;
+    }
+  }
+
   void resetFromJson(String jsonStr){
     clear();
     JsonParse parse = JsonParse.fromString(jsonStr);
@@ -210,6 +230,18 @@ class DxValue extends BaseValue{
       _keys = null;
       parse.parseArray(this);
     }
+  }
+
+  void decodeWithCoder(Uint8List data, BinCoder codeStyle){
+    codeStyle.decodeToValue(data, this);
+  }
+
+  Uint8List encodeWithCoder(BinCoder codeStyle){
+    return codeStyle.encode(this);
+  }
+
+  Uint8List encodeJson({bool format=true,bool utf8=false}){
+    return JsonEncoder.toU8List(this,format: format,utf8: utf8);
   }
 
   void resetFromJsonBytes(Uint8List u8List){

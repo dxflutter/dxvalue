@@ -5,10 +5,11 @@
 
 import 'dart:typed_data';
 import 'package:dxvalue/dxvalue.dart';
+import 'package:flutter/cupertino.dart';
 import 'typeSystem.dart';
 part 'numFormat.dart';
 
-class MsgPackParser {
+class MsgPackParser implements BinCoder{
   Uint8List _dataList;
   int _offset=0;
   ByteData _byteData;
@@ -358,6 +359,189 @@ class MsgPackParser {
         _parseValue(objValue,key:key,shareBinary: shareBinary);
       }
     }
+  }
+
+  @override
+  void decodeToValue(Uint8List data, DxValue destValue) {
+    formatCode.reset(_dataList[_offset]);
+    bool isArray = formatCode.isArray();
+    destValue.resetValueType(isArray);
+    if(isArray){
+      _offset++;
+      parseArray(destValue);
+    }else if(formatCode.isMap()){
+      _offset++;
+      parseObject(destValue);
+    }
+  }
+
+  void _encodeMap(BytesBuilder bytesBuilder,DxValue value){
+    int mapLen = value.length;
+    if(mapLen < 16){
+      bytesBuilder.addByte(0x80 | mapLen);
+    }else if (mapLen < 65536){
+      bytesBuilder.addByte(0xde);
+      bytesBuilder.addByte(mapLen >> 8);
+      bytesBuilder.addByte(mapLen);
+    }else {
+      bytesBuilder.addByte(0xdf);
+      bytesBuilder.addByte(mapLen >> 24);
+      bytesBuilder.addByte(mapLen >> 16);
+      bytesBuilder.addByte(mapLen >> 8);
+      bytesBuilder.addByte(mapLen);
+    }
+    for (var kv in value){
+      _encodeString(bytesBuilder, kv.key);
+      _encodeValue(bytesBuilder, kv.value);
+    }
+  }
+
+  void _encodeString(BytesBuilder bytesBuilder,String value){
+    Uint8List utf8Bytes = value.toUtf8();
+    int strLen = utf8Bytes.length;
+    if(strLen < 32){
+      bytesBuilder.addByte(0xa0 | strLen);
+    }else if (strLen < 256){
+      bytesBuilder.addByte(0xd9);
+      bytesBuilder.addByte(strLen);
+    }else if (strLen < 65536){
+      bytesBuilder.addByte(0xda);
+      bytesBuilder.addByte(strLen >> 8);
+      bytesBuilder.addByte(strLen);
+    }else{
+      bytesBuilder.addByte(0xdb);
+      bytesBuilder.addByte(strLen >> 24);
+      bytesBuilder.addByte(strLen >> 16);
+      bytesBuilder.addByte(strLen >> 8);
+      bytesBuilder.addByte(strLen);
+    }
+    bytesBuilder.add(utf8Bytes);
+  }
+
+  void _encodeArray(BytesBuilder bytesBuilder,DxValue value){
+    int arrlen = value.length;
+    if(arrlen < 16){
+      bytesBuilder.addByte(0x90 | arrlen);
+    }else if (arrlen < 65536){
+      bytesBuilder.addByte(0xdc);
+      bytesBuilder.addByte(arrlen >> 8);
+      bytesBuilder.addByte(arrlen);
+    }else {
+      bytesBuilder.addByte(0xdd);
+      bytesBuilder.addByte(arrlen >> 24);
+      bytesBuilder.addByte(arrlen >> 16);
+      bytesBuilder.addByte(arrlen >> 8);
+      bytesBuilder.addByte(arrlen);
+    }
+    for(var i = 0;i< arrlen;i++){
+      _encodeValue(bytesBuilder, value[i]);
+    }
+  }
+
+  void _encodeInt(BytesBuilder bytesBuilder,int value){
+    if(value == null){
+      bytesBuilder.addByte(0xc0);
+      return;
+    }
+    if(value >= 0){
+      if(value < 128){
+        bytesBuilder.addByte(value);
+      }else if (value <= 255){
+        bytesBuilder.addByte(0xcc);
+        bytesBuilder.addByte(value);
+      }else if (value <= (1<<16) - 1){
+        bytesBuilder.addByte(0xcd);
+        bytesBuilder.addByte(value >> 8);
+        bytesBuilder.addByte(value);
+      }else if (value <= (1<<32) - 1){
+        bytesBuilder.addByte(0xce);
+        bytesBuilder.addByte(value >> 24);
+        bytesBuilder.addByte(value >> 16);
+        bytesBuilder.addByte(value >> 8);
+        bytesBuilder.addByte(value);
+      }else{
+        bytesBuilder.addByte(0xcf);
+        bytesBuilder.addByte(value >> 56);
+        bytesBuilder.addByte(value >> 48);
+        bytesBuilder.addByte(value >> 40);
+        bytesBuilder.addByte(value >> 32);
+        bytesBuilder.addByte(value >> 24);
+        bytesBuilder.addByte(value >> 16);
+        bytesBuilder.addByte(value >> 8);
+        bytesBuilder.addByte(value);
+      }
+      return;
+    }
+
+    int lowFixNeg = 0xe0 - 256;
+    if(value >= lowFixNeg){
+      bytesBuilder.addByte(value);
+    }else if (value >= (-1 << 7)){
+      bytesBuilder.addByte(0xd0);
+      bytesBuilder.addByte(value);
+    }else if (value >= (-1 << 15)){
+      bytesBuilder.addByte(0xd1);
+      bytesBuilder.addByte(value >> 8);
+      bytesBuilder.addByte(value);
+    }else if (value >= (-1 << 31)){
+      bytesBuilder.addByte(0xd2);
+      bytesBuilder.addByte(value >> 24);
+      bytesBuilder.addByte(value >> 16);
+      bytesBuilder.addByte(value >> 8);
+      bytesBuilder.addByte(value);
+    }else{
+      bytesBuilder.addByte(0xd3);
+      bytesBuilder.addByte(value >> 56);
+      bytesBuilder.addByte(value >> 48);
+      bytesBuilder.addByte(value >> 40);
+      bytesBuilder.addByte(value >> 32);
+      bytesBuilder.addByte(value >> 24);
+      bytesBuilder.addByte(value >> 16);
+      bytesBuilder.addByte(value >> 8);
+      bytesBuilder.addByte(value);
+    }
+  }
+
+  void _encodeValue(BytesBuilder bytesBuilder,BaseValue value){
+    switch(value.type){
+      case valueType.VT_Int:
+        _encodeInt(bytesBuilder, (value as IntValue).value);
+        return;
+      case valueType.VT_Float:
+      case valueType.VT_Double:
+      case valueType.VT_DateTime:
+      case valueType.VT_Boolean:
+        if ((value as BoolValue).value??false){
+          bytesBuilder.addByte(0xc3);
+        }else{
+          bytesBuilder.addByte(0xc2);
+        }
+        return ;
+      case valueType.VT_String:
+        _encodeString(bytesBuilder, (value as StringValue).value);
+        return;
+      case valueType.VT_Null:
+        bytesBuilder.addByte(0xc0);
+        return;
+      case valueType.VT_Binary:
+      case valueType.VT_Object:
+        _encodeMap(bytesBuilder,(value as DxValue));
+        return;
+      case valueType.VT_Array:
+        _encodeArray(bytesBuilder,(value as DxValue));
+        return;
+    }
+  }
+
+  @override
+  Uint8List encode(DxValue value) {
+    BytesBuilder builder = BytesBuilder();
+    if(value.type == valueType.VT_Array){
+      _encodeArray(builder,value);
+    }else{
+      _encodeMap(builder,value);
+    }
+    return builder.takeBytes();
   }
 
 }

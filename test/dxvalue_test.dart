@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:dxvalue/src/json/jsonparse.dart';
+import 'package:dxvalue/src/msgpack/coder.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -36,8 +37,17 @@ void testJson(){
   ]
 }  
   """;
-  DxValue strValue = DxValue.fromJson(st);
-  print(strValue);
+
+  JsonParse jsonParse = JsonParse(null);
+  DxValue strValue = DxValue(true);
+  strValue.decodeWithCoder(st.toUtf8(), jsonParse);
+
+  //DxValue strValue = DxValue.fromJson(st);
+  //print(strValue);
+  print(String.fromCharCodes(strValue.encodeJson()));
+
+
+
   st = JsonEncoder.encode(strValue);
   print("------strvalue Is------\r\n"+st);
   DxValue newValue = DxValue.fromJson(st);
@@ -79,6 +89,20 @@ void testMsgPack(){
   Uint8List u8List = file.readAsBytesSync();
   DxValue dxValue = DxValue.fromMsgPack(u8List);
   print(dxValue);
+
+  dxValue.clear();
+  dxValue.resetValueType(false);
+  dxValue.setKeyInt("fixInt1", 23);
+  dxValue.setKeyInt("NegFixInt", -19);
+  dxValue.setKeyInt("Int", 256);
+  dxValue.setKeyInt("Int1", 255);
+  dxValue.setKeyInt("Int2", 2255);
+  dxValue.setKeyInt("Int3", 655234);
+
+
+  Uint8List bytes = dxValue.encodeWithCoder(MsgPackParser());
+
+  file.writeAsBytes(bytes,mode: FileMode.write,flush: true);
 }
 
 void main() {
