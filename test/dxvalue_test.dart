@@ -135,11 +135,24 @@ void testMsgPack(){
   file.writeAsBytes(bytes,mode: FileMode.write,flush: true);
 }
 
+void testBson(){
+  File file = File("d:/2.bson");
+  DxValue dxValue;
+  if(file.existsSync()) {
+    Uint8List u8List = file.readAsBytesSync();
+    dxValue = DxValue.fromBson(u8List);
+    print(dxValue);
+  }
+}
+
 void main() {
   test("json dxValue",(){
     testJson();
   });
   test("msgPack dxValue",(){
     testMsgPack();
+  });
+  test("bson dxValue",(){
+    testBson();
   });
 }

@@ -17,6 +17,7 @@
 
 import 'dart:typed_data';
 
+import 'package:dxvalue/src/bson/coder.dart';
 import 'package:dxvalue/src/msgpack/coder.dart';
 import 'package:dxvalue/src/msgpack/typeSystem.dart';
 
@@ -178,13 +179,30 @@ class DxValue extends BaseValue{
     resetFromJson(jsonStr);
   }
 
-  DxValue.fromMsgPack(Uint8List msgPackData){
+  DxValue.fromMsgPack(Uint8List msgPackData,[bool shareBinary=true]){
     _values = List<BaseValue>();
     _isArray = true;
-    resetFromMsgPack(msgPackData);
+    resetFromMsgPack(msgPackData,shareBinary);
   }
 
-  void resetFromMsgPack(Uint8List msgPackData){
+  DxValue.fromBson(Uint8List bsonData,[bool shareBinary=true]){
+    _values = List<BaseValue>();
+    resetFromBson(bsonData,shareBinary);
+  }
+
+  void resetFromBson(Uint8List bsonData,[bool shareBinary=true]){
+    BsonParser parse = BsonParser(null,shareBinary);
+    if(_keys == null){
+      _keys = List<String>();
+    }else{
+      _keys.clear();
+    }
+    _values.clear();
+    _isArray = false;
+    parse.decodeToValue(bsonData, this);
+  }
+
+  void resetFromMsgPack(Uint8List msgPackData,[bool shareBinary=true]){
     MsgPackParser parse = MsgPackParser(msgPackData);
     FormatCodeValue fmtCode = parse.checkCode(true);
     if(fmtCode.isMap()){
@@ -194,11 +212,11 @@ class DxValue extends BaseValue{
         _keys.clear();
       }
       _isArray = false;
-      parse.parseObject(this);
+      parse.parseObject(this,shareBinary);
     }else if(fmtCode.isArray()){
       _isArray = true;
       _keys = null;
-      parse.parseArray(this);
+      parse.parseArray(this,shareBinary);
     }
   }
 
