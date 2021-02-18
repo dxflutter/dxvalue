@@ -262,6 +262,10 @@ class DxValue extends BaseValue{
     return JsonEncoder.toU8List(this,format: format,utf8: utf8);
   }
 
+  Uint8List encodeBson(){
+    return BsonParser().encode(this);
+  }
+
   Uint8List encodeMsgPack(){
     return MsgPackParser().encode(this);
   }

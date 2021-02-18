@@ -142,6 +142,12 @@ void testBson(){
     Uint8List u8List = file.readAsBytesSync();
     dxValue = DxValue.fromBson(u8List);
     print(dxValue);
+
+    u8List = dxValue.encodeBson();
+    dxValue.clear();
+    dxValue.resetFromBson(u8List);
+    print(dxValue);
+
   }
 }
 
