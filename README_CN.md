@@ -6,19 +6,23 @@ dart版本的超级值对象，支持Json,MsgPack，Bson
 ### 1、构造函数
 - 创建一个空白的DxValue
 - 从Json创建一个DxValue
-- 从MsgPack创建一个DxValue   
+- 从MsgPack创建一个DxValue  
+- 从Bson创建一个DxValue 
 
 创建空白对象的时候，需要指定一个参数，用来表示要创建数组类型，还是要创建对象类型。
 ### 2、解码
 - 通过构造函数 **DxValue.fromJson** 构建Json
 - 通过构造函数 **DxValue.fromMsgPack** 构建MsgPack
+- 通过构造函数 **DxValue.fromBson** 构建Bson
 - 使用 **resetFromMsgPack** 针对已经构建好的对象解码MsgPack
 - 使用 **resetFromJson** 针对已经构建好的对象解析Json
+- 使用 **resetFromBson** 针对已经构建好的对象解析Bson
 - 自己实现解码器，使用 **decodeWithCoder** 设定解码器进行解码
 
 ### 3、编码
 - **encodeJson** 将DxValue编码到Json二进制
 - **encodeMsgPack** 将DxValue编码到MsgPack二进制
+- **encodeBson** 将DxValue编码到Bson二进制
 - 自定义编码器，使用 **encodeWithCoder** 进行自定义编码
 
 ### 4、使用

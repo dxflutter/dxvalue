@@ -1,6 +1,6 @@
 name: dxvalue
-description: A super value library support json,msgpack,bson.
-version: 0.1.4
+description: A super struct value library support json,msgpack,bson.
+version: 0.1.5
 author: suiyunonghen
 homepage: https://github.com/dxflutter/dxvalue
 

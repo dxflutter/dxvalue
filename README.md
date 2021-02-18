@@ -7,19 +7,23 @@ A super value library support json,msgpack,bson.
 - create an empty DxValue()
 - create DxValue from Json
 - create DxValue from MsgPack
+- create DxValue from Bson
 
 When creating a blank object, you need to specify a parameter to indicate whether you want to create an array type or an object type.
 
 ### 2、Decode
 - use Constructors **DxValue.fromJson**  to decode  json
 - use Constructors **DxValue.fromMsgPack** to decode msgpack
+- use Constructors **DxValue.fromBson** to decode bson
 - use **resetFromMsgPack** method to decode msgpack
 - use **resetFromJson** method to decode json
+- use **resetFromBson** method to decode bson
 - use **decodeWithCoder** appoint custom decoder to decode custom Code
 
 ### 3、encode
 - **encodeJson** 
 - **encodeMsgPack**
+- **encodeBson**
 - use **encodeWithCoder** appoint custom encoder to encode custom code
 
 ### 4、useage
